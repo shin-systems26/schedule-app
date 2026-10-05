@@ -4,7 +4,7 @@
 
 管理者がイベントと回答項目を作成し、参加者が共有リンクから参加可能な日時を回答します。管理者は集まった回答をもとに、候補日時のランキングを確認できます。
 
-[アプリを開く](https://rg26n055-gif.github.io/schedule-app/)
+[アプリを開く](https://shin-systems26.github.io/schedule-app/)
 
 ## 解決したい課題
 
