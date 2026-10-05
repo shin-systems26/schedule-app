@@ -2,7 +2,7 @@
 const f = window.fixture;
 export const db = {}, provider = {}, auth = { currentUser: f.user };
 export function onAuthStateChanged(a, callback) { window.authCallback = callback; queueMicrotask(() => callback(a.currentUser)); }
-export async function signInWithPopup() { auth.currentUser = { uid: 'owner', displayName: 'テスト管理者' }; window.authCallback(auth.currentUser); }
+export async function signInWithPopup() { if (window.fixture.loginError) throw { code: window.fixture.loginError };  auth.currentUser = { uid: 'owner', displayName: 'テスト管理者' }; window.authCallback(auth.currentUser); }
 export async function signOut() { auth.currentUser = null; window.authCallback(null); }
 export const collection = (db, ...parts) => parts.join('/');
 export const doc = (db, ...parts) => parts.join('/');

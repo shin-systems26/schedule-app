@@ -138,8 +138,19 @@ function route() {
 
 $('loginButton').onclick = async () => {
   $('loginButton').disabled = true;
+  report('appStatus', 'ログイン中…');
   try { await signInWithPopup(auth, provider); }
-  catch (error) { report('appStatus', 'ログインできませんでした。ポップアップを許可して再試行してください。', error); }
+  catch (error) {
+    const messages = {
+      'auth/unauthorized-domain': 'このアドレスからのログインが許可されていません。管理者はFirebase Authenticationの承認済みドメインに ' + location.hostname + ' を追加してください。',
+      'auth/popup-blocked': 'ポップアップがブロックされました。ブラウザーで許可して再試行してください。',
+      'auth/popup-closed-by-user': 'ログインをキャンセルしました。もう一度ログインできます。',
+      'auth/cancelled-popup-request': '別のログイン操作が進行中です。開いているログイン画面を確認してください。',
+      'auth/network-request-failed': '通信できませんでした。インターネット接続を確認して再試行してください。',
+      'auth/operation-not-allowed': 'Googleログインが有効になっていません。管理者はFirebase Authenticationのログイン方法を確認してください。',
+    };
+    report('appStatus', messages[error.code] || 'ログインできませんでした。時間をおいて再試行してください。解決しない場合は管理者に連絡してください。', error);
+  }
   finally { $('loginButton').disabled = false; }
 };
 $('logoutButton').onclick = async () => {

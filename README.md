@@ -174,3 +174,12 @@ Playwrightと対応ブラウザーの導入済み環境では、サーバー起�
 - 送信済み回答の編集・重複回答への対応
 - 集計の重みや表示方法の検証
 - 大きなイベントでの表示速度・読み取り量の確認
+
+## 公開ドメイン変更後のログイン確認
+
+- 公開URL: https://shin-systems26.github.io/schedule-app/
+- Firebaseプロジェクト: `smart-schedule-coordinat-79ae1`
+- Authentication → Settings → Authorized domains に `shin-systems26.github.io` を登録します（`https://` やパスは不要）。2026-10-05の確認時点では登録済みです。
+- `authDomain` は `smart-schedule-coordinat-79ae1.firebaseapp.com` を維持します。GitHub Pagesのホスト名に置き換えないでください。
+- ログイン失敗時は、未承認ドメイン・ポップアップブロック・キャンセル・通信エラーなどを区別して表示します。
+- 旧ドメインのブックマークや共有済みリンクは、新ドメインの同じパス・クエリに更新してください。旧Pages URLの転送はこのリポジトリから制御できません。
