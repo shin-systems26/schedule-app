@@ -24,3 +24,12 @@ textarea { resize: vertical; } .date-fields { display: grid; grid-template-colum
 table { width: 100%; min-width: 600px; border-collapse: collapse; font-size: 14px; } th, td { border-bottom: 1px solid #dce5e1; padding: 12px 8px; text-align: center; } th { background: #f3f6f5; } .top { font-weight: bold; } .good { background: #dcfce7; }
 footer { margin-top: 36px; font-size: 12px; color: #64746e; }
 @media (max-width: 720px) { body { padding: 22px 14px; } .home-grid { grid-template-columns: 1fr; gap: 0; } .page-header { flex-direction: column; align-items: stretch; } #account { align-items: flex-start; } .card { padding: 20px; } .date-fields { grid-template-columns: 1fr; gap: 0; } .section-heading { align-items: flex-start; } }
+select { width: 100%; min-width: 0; max-width: 100%; padding: 12px; border: 1px solid #b9c9c2; border-radius: 8px; font: inherit; color: inherit; background: white; }
+#splitSection { margin-top: 28px; border-top: 1px solid #dce5e1; }
+.split-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 16px; }
+.check-label { display: flex; align-items: center; gap: 10px; } .check-label input { width: auto; flex-shrink: 0; }
+#splitSection summary { cursor: pointer; padding: 16px 0; font-weight: 600; }
+.split-plan { border: 1px solid #b9c9c2; border-radius: 12px; padding: 18px; margin: 18px 0; overflow-wrap: anywhere; }
+.split-plan.selected { border: 3px solid #17695b; background: #edf4f0; }
+.split-plan h4 { font-size: 19px; margin: 0; } .split-plan h5 { font-size: 16px; margin: 20px 0 8px; }
+@media (max-width: 720px) { .split-fields { grid-template-columns: 1fr; } }

@@ -1,3 +1,4 @@
+import { setupSplit, clearSplit } from './split-ui.js';
 import { db, auth, provider } from './firebase.js';
 import { onAuthStateChanged, signInWithPopup, signOut } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js';
 import { collection, doc, getDoc, getDocs, query, where, limit, addDoc, serverTimestamp, updateDoc, writeBatch, deleteDoc } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
@@ -25,6 +26,7 @@ function detailButtons(disabled) {
   for (const id of ['toggleOpenButton', 'deleteEventButton', 'refreshResponses']) $(id).disabled = disabled;
 }
 function clearDetail() {
+  clearSplit();
   detailVersion++;
   selected = null;
   $('management').hidden = true;
@@ -108,11 +110,12 @@ async function openEvent(id) {
     report('manageStatus', '回答を読み込み中…');
     const responsesSnapshot = await getDocs(collection(db, 'events', id, 'responses'));
     if (!active()) return;
-    const responses = responsesSnapshot.docs.map(item => item.data());
+    const responses = responsesSnapshot.docs.map(item => ({ ...item.data(), id: item.id }));
     report('manageStatus', `回答者数：${responses.length}人`);
     for (const response of responses) {
       const name = document.createElement('p'); name.textContent = response.name || '名前なし'; $('responseNames').append(name);
     }
+    setupSplit(data, responses);
     const slots = makeSlots(data.startDate, data.endDate);
     for (const [index, group] of eventGroups(data).entries()) {
       renderRanking($('rankingArea'), `${index + 1}. ${group.title}`, calculateRanking(responses, group.id, slots), responses.length);
@@ -179,6 +182,7 @@ $('createForm').onsubmit = async event => {
     const ref = await addDoc(collection(db, 'events'), {
       title, startDate, endDate, ownerId: currentUser.uid, isOpen: true,
       groups: titles.map((title, index) => ({ id: `group${index + 1}`, title })),
+      ...($('scheduleMode').value === 'split' ? { scheduleMode: 'split' } : {}),
       createdAt: serverTimestamp()
     });
     if (session !== authVersion) return;
