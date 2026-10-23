@@ -1,0 +1,7 @@
+<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>分割日程プレビュー（架空データ）</title><style>body{margin:0}iframe{border:0;width:100%;height:100vh;display:block}</style></head><body><iframe id="preview" title="架空の5人と主催者の分割調整"></iframe><script>
+const key=h=>`2026-10-20 ${String(h).padStart(2,'0')}:00〜${String(h+1).padStart(2,'0')}:00`;
+const response=(name,hours)=>({name,answers:{group1:Object.fromEntries(hours.map(h=>[key(h),'yes']))}});
+window.testFixture={user:{uid:'owner',displayName:'プレビュー管理者'},events:{one:{title:'ダンス練習（架空データ）',startDate:'2026-10-20',endDate:'2026-10-20',ownerId:'owner',isOpen:true,scheduleMode:'split',groups:[{id:'group1',title:'対面でやる場合'}]}},responses:{one:[response('主催者',[15,17]),response('A',[15]),response('B',[15]),response('C',[17]),response('D',[17]),response('E',[17])]},reads:[],writes:[],batches:[]};
+const frame=document.getElementById('preview');frame.src='/fixture/#manage=one';
+frame.onload=()=>{const timer=setInterval(()=>{const d=frame.contentDocument;if(!d.getElementById('splitOrganizer')?.options.length)return;clearInterval(timer);d.getElementById('splitOrganizer').value='0';d.getElementById('splitRequire').checked=true;d.getElementById('splitForm').requestSubmit();d.getElementById('splitSection').scrollIntoView();},30);};
+</script></body></html>

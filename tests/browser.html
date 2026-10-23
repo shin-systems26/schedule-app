@@ -49,6 +49,30 @@ await test('ログイン失敗の原因別表示と再試行',async()=>{
  }
  delete testFixture.loginError;el('loginButton').click();await until(()=>!el('dashboard').hidden);check(el('appStatus').textContent==='','Stale error remains');
 });
+await test('分割モードで作成・既存通常ランキングを維持',async()=>{
+ fixture();await go('#create');await until(()=>el('createButton')&&!el('createButton').disabled);
+ el('title').value='分割練習';el('startDate').value='2026-10-01';el('endDate').value='2026-10-02';el('questions').value='対面';el('scheduleMode').value='split';el('createButton').click();
+ await until(()=>el('manageStatus').textContent.includes('回答者数'));
+ check(testFixture.events.created.scheduleMode==='split','Mode not saved');check(!el('splitSection').hidden,'Split not opened');check(el('rankingArea').querySelector('table'),'Normal ranking removed');
+});
+await test('既存イベントで分割提案・主催者指定・プラン選択・設定変更',async()=>{
+ const hour=h=>`2026-10-01 ${String(h).padStart(2,'0')}:00〜${String(h+1).padStart(2,'0')}:00`;
+ const response=(name,hours)=>({name,answers:{group1:Object.fromEntries(hours.map(h=>[hour(h),'yes']))}});
+ fixture({responses:{one:[response('主催者',[15,17]),response('<img src=x>',[15]),response('B',[15]),response('C',[17]),response('D',[17]),response('E',[17])]}});
+ const original=JSON.stringify(testFixture.responses);await go('#manage=one');await until(()=>el('manageStatus').textContent.includes('6人'));
+ check(el('splitSection').hidden,'Existing mode default changed');el('showSplit').click();el('splitOrganizer').value='0';el('splitRequire').checked=true;el('splitCalculate').click();
+ await until(()=>el('splitResults').querySelector('.split-plan'));
+ const first=el('splitResults').querySelector('.split-plan');check(first.textContent.includes('5人中5人'),'Coverage incorrect');check(first.textContent.includes('2回開催'),'Count incorrect');check(!first.querySelector('img'),'Unsafe name');
+ first.querySelector('button').click();check(el('splitSelection').textContent.includes('選択しました'),'Not selected');
+ check(JSON.stringify(testFixture.responses)===original&&testFixture.writes.length===0,'Planner wrote data');
+ el('splitMax').value='1';el('splitMax').dispatchEvent(new Event('input',{bubbles:true}));check(!el('splitResults').textContent,'Stale results retained');el('splitCalculate').click();await until(()=>el('splitResults').textContent.includes('参加機会を確保できない人'));
+ check(el('splitResults').textContent.includes('5人中3人'),'Fallback coverage');
+});
+await test('分割条件エラー・計算中止・ログアウトで個人名を消去',async()=>{
+ el('splitOrganizer').value='';el('splitCalculate').click();await until(()=>el('splitStatus').textContent.includes('主催者の回答を選択'));
+ el('splitRequire').checked=false;el('splitCalculate').click();el('splitCancel').click();check(el('splitStatus').textContent.includes('中止'),'Cancel failed');
+ el('logoutButton').click();await until(()=>el('dashboard').hidden);check(el('splitResults').textContent===''&&el('splitOrganizer').textContent===''&&el('splitSection').hidden,'Split personal data retained');
+});
 document.querySelector('#summary').textContent=`${passed} passed / ${failed} failed`;
 fixture();await go('#manage=one');
 </script></body></html>
