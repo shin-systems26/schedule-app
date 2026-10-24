@@ -33,3 +33,17 @@ select { width: 100%; min-width: 0; max-width: 100%; padding: 12px; border: 1px 
 .split-plan.selected { border: 3px solid #17695b; background: #edf4f0; }
 .split-plan h4 { font-size: 19px; margin: 0; } .split-plan h5 { font-size: 16px; margin: 20px 0 8px; }
 @media (max-width: 720px) { .split-fields { grid-template-columns: 1fr; } }
+
+#answerOverview { margin-top: 24px; border: 1px solid #d7e5df; border-radius: 12px; padding: 16px; }
+#answerOverview summary { cursor: pointer; font-size: 18px; font-weight: 700; color: #17695b; }
+#answerTable { max-height: 560px; overflow: auto; }
+#answerTable table { border-collapse: separate; border-spacing: 0; }
+#answerTable caption { text-align: left; padding: 12px 0; font-weight: 600; }
+#answerTable th { min-width: 120px; max-width: 240px; overflow-wrap: anywhere; }
+#answerTable thead th { position: sticky; top: 0; z-index: 2; }
+#answerTable tbody th { position: sticky; left: 0; z-index: 1; min-width: 210px; }
+#answerTable thead th:first-child { left: 0; z-index: 3; }
+#answerTable td { font-size: 20px; font-weight: 700; }
+.answer-yes { background: #e0f3e7; color: #165f36; }
+.answer-no { background: #fff0ed; color: #9b3025; }
+.answer-maybe, .answer-empty { color: #59686d; }

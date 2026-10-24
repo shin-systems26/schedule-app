@@ -46,6 +46,19 @@
         <div class="share-box"><label for="participantUrl">参加者用の回答リンク</label><input id="participantUrl" readonly><div class="toolbar"><button id="copyUrlButton">リンクをコピー</button><a id="openResponse" class="button secondary" target="_blank" rel="noopener noreferrer">回答画面を開く</a></div><p id="copyStatus" role="status"></p></div>
         <div class="toolbar"><button id="toggleOpenButton" class="secondary" disabled>受付状態を変更</button><button id="refreshResponses" class="secondary" disabled>回答を更新</button><button id="deleteEventButton" class="danger" disabled>イベントを削除</button></div>
         <p id="manageStatus" role="status"></p>
+        <details id="answerOverview" hidden>
+          <summary>全員の回答を一覧で確認</summary>
+          <p class="hint">質問項目・日付を選んで、誰が○・×・？を入力したか確認できます。個人を選ぶとその人だけを表示します。横にスクロールして全員の回答を確認できます。</p>
+          <div class="split-fields">
+            <div><label for="answerGroup">確認する質問項目</label><select id="answerGroup"></select></div>
+            <div><label for="answerPerson">確認する回答者</label><select id="answerPerson"></select></div>
+          </div>
+          <label for="answerDate">確認する日付</label><select id="answerDate"></select>
+          <div class="toolbar"><button id="answerPrevious" type="button" class="secondary">前の日</button><button id="answerNext" type="button" class="secondary">次の日</button></div>
+          <p class="hint">○：参加できそう ／ ×：参加不可 ／ ？：まだ分からない ／ —：未回答（保存なし）。同じ名前の回答は番号で区別しています。</p>
+          <p id="answerCount" role="status"></p>
+          <div id="answerTable" tabindex="0" role="region" aria-label="参加者別の回答表"></div>
+        </details>
         <h3>みんなで集まる場合の日程ランキング</h3>
         <div id="rankingArea"></div>
         <section id="splitSection" hidden aria-labelledby="splitHeading">

@@ -73,6 +73,23 @@ await test('分割条件エラー・計算中止・ログアウトで個人名�
  el('splitRequire').checked=false;el('splitCalculate').click();el('splitCancel').click();check(el('splitStatus').textContent.includes('中止'),'Cancel failed');
  el('logoutButton').click();await until(()=>el('dashboard').hidden);check(el('splitResults').textContent===''&&el('splitOrganizer').textContent===''&&el('splitSection').hidden,'Split personal data retained');
 });
+await test('回答一覧：新旧データ・未回答・同名・質問と日付と個人の切替・安全な表示',async()=>{
+ const second='2026-10-02 09:00〜10:00';
+ fixture({responses:{one:[{name:'同名',group1:{[slot]:'yes',[second]:'no'}},{name:'同名',answers:{group1:{[slot]:'no'},group2:{[slot]:'maybe'}}},{name:'<img src=x onerror=alert(1)>',answers:{group1:{[slot]:'maybe'}}}]}});
+ await go('#manage=one');await until(()=>el('manageStatus').textContent.includes('3人'));el('answerOverview').open=true;
+ const cells=()=>[...el('answerTable').querySelector('tbody tr').querySelectorAll('td')].map(td=>td.textContent).join(',');
+ check(cells()==='○,×,？','Wrong answers');check(!el('answerTable').querySelector('img'),'Unsafe name');
+ check(el('answerPerson').options[1].text!==el('answerPerson').options[2].text,'Duplicate names ambiguous');
+ el('answerNext').click();check(cells()==='×,—,—','Wrong date or missing answers');el('answerPrevious').click();check(cells()==='○,×,？','Previous day failed');
+ el('answerGroup').value='group2';el('answerGroup').dispatchEvent(new Event('change'));check(cells()==='—,？,—','Group switch failed');
+ el('answerPerson').value='1';el('answerPerson').dispatchEvent(new Event('change'));check(cells()==='？','Person switch failed');
+ check(testFixture.writes.length===0,'Read-only view wrote data');
+ el('logoutButton').click();await until(()=>el('dashboard').hidden);check(el('answerTable').textContent===''&&el('answerPerson').textContent===''&&el('answerOverview').hidden,'Private answers retained');
+});
+await test('回答一覧：空イベントと権限のないイベントに回答を残さない',async()=>{
+ fixture();await go('#manage=one');await until(()=>el('manageStatus').textContent.includes('0人'));check(el('answerCount').textContent.includes('まだ回答'),'Empty message missing');
+ frame.contentWindow.location.hash='manage=other';await until(()=>el('manageStatus').textContent.includes('権限'));check(el('answerOverview').hidden&&el('answerTable').textContent==='','Unauthorized view visible');
+});
 document.querySelector('#summary').textContent=`${passed} passed / ${failed} failed`;
 fixture();await go('#manage=one');
 </script></body></html>
