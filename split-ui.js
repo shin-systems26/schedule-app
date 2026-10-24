@@ -13,7 +13,7 @@ function stop() {
 }
 export function clearSplit() {
   stop(); context = null;
-  $('splitSection').hidden = true; $('showSplit').disabled = true;
+  $('splitSection').hidden = true;
   $('splitResults').replaceChildren(); $('splitGroup').replaceChildren(); $('splitOrganizer').replaceChildren();
   $('splitStatus').textContent = ''; $('splitSelection').textContent = '';
 }
@@ -25,8 +25,9 @@ export function setupSplit(data, responses) {
   for (const r of responses) $('splitOrganizer').add(new Option(personLabel(r), r.id));
   for (const id of ['splitStartDate', 'splitEndDate']) { $(id).min = data.startDate; $(id).max = data.endDate; }
   $('splitStartDate').value = data.startDate; $('splitEndDate').value = data.endDate;
-  $('showSplit').disabled = false;
-  $('splitSection').hidden = data.scheduleMode !== 'split';
+  $('splitSection').hidden = false;
+  if (responses.length) $('splitForm').requestSubmit();
+  else $('splitStatus').textContent = '回答が集まると、ここに分割して開催する場合の提案を表示します。';
 }
 function render(result) {
   const area = $('splitResults'); area.replaceChildren();
@@ -59,7 +60,6 @@ function render(result) {
     card.append(button); area.append(card);
   });
 }
-$('showSplit').onclick = () => { $('splitSection').hidden = false; $('splitSection').scrollIntoView({ behavior: 'smooth' }); };
 $('splitCancel').onclick = () => { stop(); $('splitStatus').textContent = '計算を中止しました。'; };
 $('splitForm').oninput = () => { stop(); $('splitResults').replaceChildren(); $('splitSelection').textContent = ''; $('splitStatus').textContent = '条件を変更しました。「組み合わせを提案」で再計算してください。'; };
 $('splitForm').onsubmit = event => {

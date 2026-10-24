@@ -32,9 +32,6 @@
           <form id="createForm">
             <label for="title">イベント名</label><input id="title" name="title" required placeholder="例：ゼミの日程調整">
             <div class="date-fields"><div><label for="startDate">開始日</label><input id="startDate" type="date" required></div><div><label for="endDate">終了日</label><input id="endDate" type="date" required></div></div>
-            <label for="scheduleMode">日程調整モード</label>
-            <select id="scheduleMode"><option value="normal">通常モード：同じ日時に集まる</option><option value="split">分割日程調整：複数回で全員の参加機会を確保</option></select>
-            <p class="hint">分割モードの開催回数や主催者の指定は、回答が集まった後に管理画面で設定できます。</p>
             <label for="questions">回答項目</label><p id="questionHint" class="hint">条件を1行に1つ入力してください。各項目について参加可能な日時を回答できます。</p>
             <textarea id="questions" rows="4" required aria-describedby="questionHint" placeholder="対面&#10;オンライン"></textarea>
             <button id="createButton" type="submit">イベントを作成</button>
@@ -49,8 +46,10 @@
         <div class="share-box"><label for="participantUrl">参加者用の回答リンク</label><input id="participantUrl" readonly><div class="toolbar"><button id="copyUrlButton">リンクをコピー</button><a id="openResponse" class="button secondary" target="_blank" rel="noopener noreferrer">回答画面を開く</a></div><p id="copyStatus" role="status"></p></div>
         <div class="toolbar"><button id="toggleOpenButton" class="secondary" disabled>受付状態を変更</button><button id="refreshResponses" class="secondary" disabled>回答を更新</button><button id="deleteEventButton" class="danger" disabled>イベントを削除</button></div>
         <p id="manageStatus" role="status"></p>
+        <h3>みんなで集まる場合の日程ランキング</h3>
+        <div id="rankingArea"></div>
         <section id="splitSection" hidden aria-labelledby="splitHeading">
-          <h3 id="splitHeading">分割日程調整</h3>
+          <h3 id="splitHeading">分割して練習・開催する場合</h3>
           <p>○と回答した人が少なくとも1回参加できる組み合わせを探します。？・未回答は参加可能に数えません。対象者は登録済みの回答者（主催者を除く）です。</p>
           <form id="splitForm">
             <div class="split-fields">
@@ -79,8 +78,7 @@
           <p class="hint">設定・プランの選択はこの画面内だけで有効です。回答データは変更されず、参加者へ自動通知されません。重複して参加可能な人は各回に表示しますが、確保率では1人として数えます。</p>
           <p id="splitStatus" role="status" aria-live="polite"></p><p id="splitSelection" role="status"></p><div id="splitResults"></div>
         </section>
-        <div class="toolbar"><button id="showSplit" type="button" class="secondary" disabled>分割日程調整を試す</button></div>
-        <div id="rankingArea"></div><h3>回答者一覧</h3><div id="responseNames"></div>
+        <h3>回答者一覧</h3><div id="responseNames"></div>
       </section>
     </div>
   </main>
