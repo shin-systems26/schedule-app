@@ -63,8 +63,10 @@
         <div id="rankingArea"></div>
         <section id="splitSection" hidden aria-labelledby="splitHeading">
           <h3 id="splitHeading">分割して練習・開催する場合</h3>
-          <p>○と回答した人が少なくとも1回参加できる組み合わせを探します。？・未回答は参加可能に数えません。対象者は登録済みの回答者（主催者を除く）です。</p>
+          <p>通常は○と回答した人が少なくとも1回参加できる組み合わせを探します。？・未回答は確定した参加可能人数に数えません。対象者は登録済みの回答者（主催者を除く）です。</p>
           <form id="splitForm">
+            <label class="check-label"><input id="splitIncludeMaybe" type="checkbox">？の人に確認できれば全員が参加できる案も探す</label>
+            <p class="hint">通常は○だけで計算します。チェックすると明示的な？も候補に含め、確認が必要な人を表示します。×・未回答は含めません。確認候補は参加確定ではありません。確認候補では全員を含めること、○だけで確保できる人数、下記の優先条件の順に比較します。</p>
             <div class="split-fields">
               <div><label for="splitGroup">練習形式・回答項目</label><select id="splitGroup"></select></div>
               <div><label for="splitOrganizer">主催者の回答</label><select id="splitOrganizer"></select></div>

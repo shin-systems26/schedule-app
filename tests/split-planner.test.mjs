@@ -120,3 +120,33 @@ test('whole duration required for host, missing selected host rejected', () => {
   assert.equal(plan([person('host', [9]), person('A', [9, 10])], { duration: 2, organizerId: 'host', requireOrganizer: true }).candidateCount, 0);
   assert.throws(() => plan([person('A', [9])], { organizerId: 'missing' }), /選び直して/);
 });
+
+test('no confirmed availability explains why 100 percent is impossible', () => {
+  const a=person('A',[9]), b=person('B',[]); b.answers.group1[slotKey(day,9)]='maybe';
+  const result=plan([a,b]);
+  assert.deepEqual(result.noConfirmedAvailability.map(p=>p.id),['B']);
+  assert.equal(result.plans[0].coverage,50);
+  const tentative=plan([a,b],{includeMaybe:true}).plans[0];
+  assert.equal(tentative.coverage,100); assert.equal(tentative.confirmedCovered,1);
+  assert.deepEqual(tentative.sessions[0].needsConfirmation.map(p=>p.id),['B']);
+});
+test('tentative search excludes no and missing and checks every hour', () => {
+  const a=person('A',[9,10]), b=person('B',[9]), c=person('C',[]), d={id:'D'};
+  b.answers.group1[slotKey(day,10)]='maybe';c.answers.group1[slotKey(day,9)]='maybe';c.answers.group1[slotKey(day,10)]='no';
+  const result=plan([a,b,c,d],{includeMaybe:true,duration:2}).plans[0];
+  assert.equal(result.covered,2); assert.equal(result.confirmedCovered,1);
+  assert.deepEqual(result.uncovered.map(p=>p.id),['C','D']);
+});
+test('tentative host requirement still requires yes and preserves source answers', () => {
+  const people=[person('host',[]),person('A',[9])]; people[0].answers.group1[slotKey(day,9)]='maybe';
+  const original=structuredClone(people);
+  assert.equal(plan(people,{organizerId:'host',requireOrganizer:true,includeMaybe:true}).plans.length,0);
+  assert.deepEqual(people,original);
+});
+test('five people can have a conditional 100 percent plan but only 80 percent confirmed', () => {
+  const people=[person('A',[12]),person('B',[18]),person('C',[]),person('D',[12]),person('E',[18])];
+  people[2].answers.group1[slotKey(day,12)]='maybe';people[2].answers.group1[slotKey(day,18)]='maybe';
+  const result=plan(people,{includeMaybe:true,minParticipants:2,maxSessions:2}).plans[0];
+  assert.equal(result.coverage,100);assert.equal(result.confirmedCovered,4);assert.equal(result.sessions.length,2);
+  assert.equal(plan(people,{minParticipants:2,maxSessions:3}).plans[0].coverage,80);
+});
