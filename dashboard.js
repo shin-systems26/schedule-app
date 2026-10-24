@@ -182,7 +182,6 @@ $('createForm').onsubmit = async event => {
     const ref = await addDoc(collection(db, 'events'), {
       title, startDate, endDate, ownerId: currentUser.uid, isOpen: true,
       groups: titles.map((title, index) => ({ id: `group${index + 1}`, title })),
-      ...($('scheduleMode').value === 'split' ? { scheduleMode: 'split' } : {}),
       createdAt: serverTimestamp()
     });
     if (session !== authVersion) return;
