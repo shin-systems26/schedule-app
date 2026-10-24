@@ -1,3 +1,4 @@
+import { setupResponseView, clearResponseView } from './response-view.js';
 import { setupSplit, clearSplit } from './split-ui.js';
 import { db, auth, provider } from './firebase.js';
 import { onAuthStateChanged, signInWithPopup, signOut } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js';
@@ -27,6 +28,7 @@ function detailButtons(disabled) {
 }
 function clearDetail() {
   clearSplit();
+  clearResponseView();
   detailVersion++;
   selected = null;
   $('management').hidden = true;
@@ -115,6 +117,7 @@ async function openEvent(id) {
     for (const response of responses) {
       const name = document.createElement('p'); name.textContent = response.name || '名前なし'; $('responseNames').append(name);
     }
+    setupResponseView(data, responses);
     setupSplit(data, responses);
     const slots = makeSlots(data.startDate, data.endDate);
     for (const [index, group] of eventGroups(data).entries()) {
