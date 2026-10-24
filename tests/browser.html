@@ -90,6 +90,16 @@ await test('回答一覧：空イベントと権限のないイベントに回�
  fixture();await go('#manage=one');await until(()=>el('manageStatus').textContent.includes('0人'));check(el('answerCount').textContent.includes('まだ回答'),'Empty message missing');
  frame.contentWindow.location.hash='manage=other';await until(()=>el('manageStatus').textContent.includes('権限'));check(el('answerOverview').hidden&&el('answerTable').textContent==='','Unauthorized view visible');
 });
+await test('？を含める場合は要確認と確定人数を明示し、回答を書き換えない',async()=>{
+ fixture({responses:{one:[{name:'A',answers:{group1:{[slot]:'yes'}}},{name:'B',answers:{group1:{[slot]:'maybe'}}}]}});
+ await go('#manage=one');await until(()=>el('splitResults').textContent.includes('○だけでは100％'));
+ const before=JSON.stringify(testFixture.responses);el('splitIncludeMaybe').checked=true;el('splitCalculate').click();
+ await until(()=>el('splitResults').textContent.includes('要確認プラン'));
+ check(el('splitResults').textContent.includes('確認後の見込み100％'),'Missing conditional coverage');
+ check(el('splitResults').textContent.includes('○のみで参加機会を確保：1人／2人'),'Confirmed count missing');
+ check(el('splitResults').textContent.includes('この日時の？を確認する人：B'),'Confirmation target missing');
+ check(JSON.stringify(testFixture.responses)===before&&testFixture.writes.length===0,'Changed answers');
+});
 document.querySelector('#summary').textContent=`${passed} passed / ${failed} failed`;
 fixture();await go('#manage=one');
 </script></body></html>

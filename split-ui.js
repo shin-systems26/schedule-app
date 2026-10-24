@@ -34,17 +34,21 @@ function render(result) {
   const caveat = result.truncated ? '探索上限に達したため暫定案です。最適性や最大参加人数は未保証です。期間や最大回数を絞って再計算してください。' : '指定条件内で候補を比較しました。';
   if (!result.people.length) { $('splitStatus').textContent = '対象となる回答者がいません。主催者以外の回答を集めてください。'; return; }
   $('splitStatus').textContent = `${result.candidateCount}件の開催候補から提案。${caveat}`;
+  if (result.noConfirmedAvailability?.length) area.append(text('p', `この期間・時間帯・所要時間で○の候補がない人：${result.noConfirmedAvailability.map(personLabel).join('、')}。○だけでは100％にできません。？の候補を探して本人に確認してください。`));
+  if (result.includeMaybe) area.append(text('p', '以下は？を含む確認用の候補です。100％と表示されても全員の参加が確認できたわけではありません。○のみで確保できる人数も併記します。'));
   if (!result.plans.length) {
     area.append(text('p', '最低人数・主催者・時間帯の条件を満たす候補がありません。条件を緩めて再計算してください。'), text('p', `参加機会を確保できない人：${result.people.map(personLabel).join('、')}`)); return;
   }
   result.plans.forEach((plan, index) => {
     const card = text('article', ''); card.className = 'split-plan';
-    card.append(text('h4', `${plan.complete ? 'おすすめ' : '代替'}プラン${index + 1}：${plan.sessions.length}回開催`));
-    card.append(text('p', `${plan.total}人中${plan.covered}人が参加可能（参加機会確保率${Math.round(plan.coverage * 10) / 10}％）${plan.complete ? '・全員の参加機会を確保' : '・全員をカバーできていません'}`));
+    card.append(text('h4', `${result.includeMaybe ? '要確認' : plan.complete ? 'おすすめ' : '代替'}プラン${index + 1}：${plan.sessions.length}回開催`));
+    if (result.includeMaybe) card.append(text('p', `○のみで参加機会を確保：${plan.confirmedCovered}人／${plan.total}人`));
+    card.append(text('p', `${plan.total}人中${plan.covered}人が${result.includeMaybe ? '確認できれば参加可能（確認後の見込み' : '参加可能（参加機会確保率'}${Math.round(plan.coverage * 10) / 10}％）${plan.complete ? (result.includeMaybe ? '・全員の確認が取れた場合' : '・全員の参加機会を確保') : '・全員をカバーできていません'}`));
     plan.sessions.forEach((session, i) => {
       const block = text('div', '');
       block.append(text('h5', `練習${i + 1}：${session.date} ${String(session.start).padStart(2, '0')}:00〜${String(session.end).padStart(2, '0')}:00`));
-      block.append(text('p', `参加可能（${session.participants.length}人）：${session.participants.map(personLabel).join('、')}`));
+      block.append(text('p', `${result.includeMaybe ? '参加候補' : '参加可能'}（${session.participants.length}人）：${session.participants.map(personLabel).join('、')}`));
+      if (session.needsConfirmation?.length) block.append(text('p', `この日時の？を確認する人：${session.needsConfirmation.map(personLabel).join('、')}`));
       block.append(text('p', session.organizerAvailable === null ? '主催者：未指定・参加可否は未確認' : `主催者：${session.organizerAvailable ? '参加可能' : '参加可能と確認できません'}`));
       if (session.avoidedHours) block.append(text('p', `避けたい時間帯を${session.avoidedHours}時間含みます。`));
       card.append(block);
@@ -67,6 +71,7 @@ $('splitForm').onsubmit = event => {
   $('splitResults').replaceChildren(); $('splitSelection').textContent = '';
   try {
     const settings = validateSettings({
+      includeMaybe: $('splitIncludeMaybe').checked,
       startDate: $('splitStartDate').value, endDate: $('splitEndDate').value,
       maxSessions: Number($('splitMax').value), minParticipants: Number($('splitMin').value), duration: Number($('splitDuration').value),
       startHour: Number($('splitStartHour').value), endHour: Number($('splitEndHour').value),

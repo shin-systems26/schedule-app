@@ -28,21 +28,26 @@ export function planSplit(responses, group, settings, { maxNodes = 250000, top =
   const people = responses.filter(r => r !== organizer).map(r => ({ id: r.id, name: r.name || '名前なし' }));
   const targets = responses.filter(r => r !== organizer);
   const all = (1n << BigInt(people.length)) - 1n;
-  const available = (r, date, start) => {
+  const available = (r, date, start, includeMaybe = false) => {
     const answers = r.answers?.[group] || r[group] || {};
-    return Array.from({ length: s.duration }, (_, i) => answers[slotKey(date, start + i)] === 'yes').every(Boolean);
+    return Array.from({ length: s.duration }, (_, i) => ['yes', ...(includeMaybe ? ['maybe'] : [])].includes(answers[slotKey(date, start + i)])).every(Boolean);
   };
   const avoided = hour => !s.avoidEnabled ? false : s.avoidStart === s.avoidEnd ? true : s.avoidStart < s.avoidEnd ? hour >= s.avoidStart && hour < s.avoidEnd : hour >= s.avoidStart || hour < s.avoidEnd;
   const candidates = [];
+  let confirmedAnywhere = 0n;
   if (people.length) for (let time = dateValue(s.startDate); time <= dateValue(s.endDate); time += 86400000) {
     const date = new Date(time).toISOString().slice(0, 10);
     for (let start = s.startHour; start + s.duration <= s.endHour; start++) {
-      let mask = 0n;
-      targets.forEach((r, i) => { if (available(r, date, start)) mask |= 1n << BigInt(i); });
+      let mask = 0n, confirmedMask = 0n;
+      targets.forEach((r, i) => {
+        if (available(r, date, start)) confirmedMask |= 1n << BigInt(i);
+        if (available(r, date, start, s.includeMaybe === true)) mask |= 1n << BigInt(i);
+      });
+      confirmedAnywhere |= confirmedMask;
       const size = count(mask), host = organizer ? available(organizer, date, start) : null;
       if (size < s.minParticipants || (s.requireOrganizer && !host)) continue;
       const late = Array.from({ length: s.duration }, (_, i) => avoided(start + i)).filter(Boolean).length;
-      candidates.push({ date, start, end: start + s.duration, mask, size, host, late });
+      candidates.push({ date, start, end: start + s.duration, mask, confirmedMask, size, host, late });
     }
   }
   // High-coverage candidates first gives useful fallback results if the explicit search budget is reached.
@@ -50,7 +55,7 @@ export function planSplit(responses, group, settings, { maxNodes = 250000, top =
   const suffix = Array(candidates.length + 1).fill(0n);
   for (let i = candidates.length - 1; i >= 0; i--) suffix[i] = suffix[i + 1] | candidates[i].mask;
   const priorities = s.priority === 'early' ? ['late', 'sessions', 'hostMisses', 'imbalance'] : s.priority === 'balanced' ? ['imbalance', 'sessions', 'hostMisses', 'late'] : ['sessions', 'hostMisses', 'late', 'imbalance'];
-  const compare = (a, b) => b.covered - a.covered || priorities.reduce((difference, key) => difference || a[key] - b[key], 0) || a.key.localeCompare(b.key);
+  const compare = (a, b) => b.covered - a.covered || (s.includeMaybe ? b.confirmedCovered - a.confirmedCovered : 0) || priorities.reduce((difference, key) => difference || a[key] - b[key], 0) || a.key.localeCompare(b.key);
   let nodes = 0, truncated = false;
   const best = [];
   function visit(next, chosen, mask, depth) {
@@ -58,7 +63,8 @@ export function planSplit(responses, group, settings, { maxNodes = 250000, top =
     nodes++;
     if (chosen.length === depth) {
       const sessions = [...chosen].sort((a, b) => a.date.localeCompare(b.date) || a.start - b.start);
-      const plan = { sessions: sessions.length, covered: count(mask), mask, late: sessions.reduce((n, c) => n + c.late, 0), hostMisses: sessions.filter(c => c.host === false).length, imbalance: Math.max(...sessions.map(c => c.size)) - Math.min(...sessions.map(c => c.size)), key: sessions.map(c => `${c.date}-${String(c.start).padStart(2, '0')}`).join('|'), entries: sessions };
+      const confirmedMask = sessions.reduce((mask, c) => mask | c.confirmedMask, 0n);
+      const plan = { confirmedMask, confirmedCovered: count(confirmedMask), sessions: sessions.length, covered: count(mask), mask, late: sessions.reduce((n, c) => n + c.late, 0), hostMisses: sessions.filter(c => c.host === false).length, imbalance: Math.max(...sessions.map(c => c.size)) - Math.min(...sessions.map(c => c.size)), key: sessions.map(c => `${c.date}-${String(c.start).padStart(2, '0')}`).join('|'), entries: sessions };
       best.push(plan); best.sort(compare); if (best.length > top) best.pop();
     }
     if (chosen.length >= depth) return;
@@ -75,12 +81,14 @@ export function planSplit(responses, group, settings, { maxNodes = 250000, top =
     visit(0, [], 0n, depth);
     if (truncated) break;
     // All higher session counts are worse once five complete plans exist in sessions-first mode.
-    if (s.priority === 'sessions' && best.length === top && best.every(p => p.mask === all)) break;
+    if (!s.includeMaybe && s.priority === 'sessions' && best.length === top && best.every(p => p.mask === all)) break;
   }
-  return { people, candidateCount: candidates.length, nodes, truncated, plans: best.map(p => ({
-    complete: p.mask === all, covered: p.covered, total: people.length, coverage: p.covered / people.length * 100,
+  return { people, includeMaybe: s.includeMaybe === true,
+    noConfirmedAvailability: people.filter((_, i) => !(confirmedAnywhere & (1n << BigInt(i)))),
+    candidateCount: candidates.length, nodes, truncated, plans: best.map(p => ({
+    confirmedCovered: p.confirmedCovered, complete: p.mask === all, covered: p.covered, total: people.length, coverage: p.covered / people.length * 100,
     lateHours: p.late, imbalance: p.imbalance, hostMisses: p.hostMisses,
     uncovered: people.filter((_, i) => !(p.mask & (1n << BigInt(i)))),
-    sessions: p.entries.map(c => ({ date: c.date, start: c.start, end: c.end, organizerAvailable: c.host, avoidedHours: c.late, participants: people.filter((_, i) => c.mask & (1n << BigInt(i))) }))
+    sessions: p.entries.map(c => ({ date: c.date, start: c.start, end: c.end, organizerAvailable: c.host, avoidedHours: c.late, participants: people.filter((_, i) => c.mask & (1n << BigInt(i))), needsConfirmation: people.filter((_, i) => (c.mask & (1n << BigInt(i))) && !(c.confirmedMask & (1n << BigInt(i)))) }))
   })) };
 }
