@@ -1,5 +1,5 @@
 import { eventGroups } from './groups.js';
-import { validateSettings } from './split-planner.js';
+import { validateSettings } from './split-planner.js?v=conditional-1';
 const $ = id => document.getElementById(id);
 const text = (tag, value) => { const element = document.createElement(tag); element.textContent = value; return element; };
 let worker = null, timeout = null, context = null;
@@ -79,7 +79,7 @@ $('splitForm').onsubmit = event => {
       organizerId: $('splitOrganizer').value, requireOrganizer: $('splitRequire').checked, priority: $('splitPriority').value
     });
     if (settings.startDate < context.data.startDate || settings.endDate > context.data.endDate) throw Error('イベントの期間内を指定してください。');
-    worker = new Worker(new URL('./split-worker.js', import.meta.url), { type: 'module' });
+    worker = new Worker(new URL('./split-worker.js?v=conditional-1', import.meta.url), { type: 'module' });
     $('splitCalculate').disabled = true; $('splitCancel').hidden = false;
     $('splitStatus').textContent = '候補の組み合わせを計算中…';
     const activeWorker = worker;
