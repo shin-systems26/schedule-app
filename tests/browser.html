@@ -65,8 +65,11 @@ await test('既存イベントで分割提案・主催者指定・プラン選�
  const first=el('splitResults').querySelector('.split-plan');check(first.textContent.includes('5人中5人'),'Coverage incorrect');check(first.textContent.includes('2回開催'),'Count incorrect');check(!first.querySelector('img'),'Unsafe name');
  first.querySelector('button').click();check(el('splitSelection').textContent.includes('選択しました'),'Not selected');
  check(JSON.stringify(testFixture.responses)===original&&testFixture.writes.length===0,'Planner wrote data');
- el('splitMax').value='1';el('splitMax').dispatchEvent(new Event('input',{bubbles:true}));check(!el('splitResults').textContent,'Stale results retained');el('splitCalculate').click();await until(()=>el('splitResults').textContent.includes('参加機会を確保できない人'));
- check(el('splitResults').textContent.includes('5人中3人'),'Fallback coverage');
+ check(!el('splitMax')&&!el('splitMin'),'Fixed settings still editable');
+ check([...el('splitDuration').options].map(o=>o.value).join(',')==='0.5,1','Wrong duration options');
+ el('splitDuration').value='0.5';el('splitDuration').dispatchEvent(new Event('input',{bubbles:true}));check(!el('splitResults').textContent,'Stale results retained');el('splitCalculate').click();await until(()=>el('splitResults').textContent.includes('15:00〜15:30'));
+ check(el('splitResults').textContent.includes('5人中5人'),'Half-hour coverage');
+ check(!el('splitResults').textContent.includes('3回開催'),'More than two sessions');
 });
 await test('分割条件エラー・計算中止・ログアウトで個人名を消去',async()=>{
  el('splitOrganizer').value='';el('splitCalculate').click();await until(()=>el('splitStatus').textContent.includes('主催者の回答を選択'));

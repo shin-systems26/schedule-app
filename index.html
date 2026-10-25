@@ -70,9 +70,8 @@
             <div class="split-fields">
               <div><label for="splitGroup">練習形式・回答項目</label><select id="splitGroup"></select></div>
               <div><label for="splitOrganizer">主催者の回答</label><select id="splitOrganizer"></select></div>
-              <div><label for="splitMax">最大開催回数</label><input id="splitMax" type="number" min="1" max="5" value="3" required></div>
-              <div><label for="splitMin">1回の最低人数（主催者を除く）</label><input id="splitMin" type="number" min="1" max="10000" value="2" required></div>
-              <div><label for="splitDuration">所要時間（時間）</label><input id="splitDuration" type="number" min="1" max="13" value="1" required></div>
+              <p>最大2回開催・1回の最低人数は2人（主催者を除く）</p>
+              <div><label for="splitDuration">1回の開催時間</label><select id="splitDuration"><option value="0.5">30分（0.5時間）</option><option value="1" selected>1時間</option></select></div>
             </div>
             <p class="hint">主催者も参加者用リンクから回答し、ここで選んでください。未指定では主催者の予定を判定できません。同じ名前でも別の回答として扱います。</p>
             <label class="check-label"><input id="splitRequire" type="checkbox">主催者がすべての回で○のことを必須にする</label>
@@ -98,6 +97,6 @@
     </div>
   </main>
   <footer>Smart Schedule Coordinator</footer>
-  <script type="module" src="./dashboard.js?v=timetable-1"></script>
+  <script type="module" src="./dashboard.js?v=split-simple-1"></script>
 </body>
 </html>

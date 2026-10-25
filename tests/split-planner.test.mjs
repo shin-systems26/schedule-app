@@ -150,3 +150,12 @@ test('five people can have a conditional 100 percent plan but only 80 percent co
   assert.equal(result.coverage,100);assert.equal(result.confirmedCovered,4);assert.equal(result.sessions.length,2);
   assert.equal(plan(people,{minParticipants:2,maxSessions:3}).plans[0].coverage,80);
 });
+
+test('half-hour sessions include legacy half-hour starts and require full availability', () => {
+ const people=[person('A',[9]),person('B',[9])];
+ const result=plan(people,{duration:0.5,minParticipants:2,maxSessions:2});
+ assert.ok(result.plans.some(p=>p.sessions.some(s=>s.start===9.5 && s.end===10)));
+ const fine=[{id:'A',answers:{group1:{[`${day} 09:00〜09:30`]:'yes'}}},{id:'B',answers:{group1:{[`${day} 09:00〜09:30`]:'yes'}}}];
+ assert.equal(plan(fine,{duration:0.5,minParticipants:2,maxSessions:2}).plans[0].complete,true);
+ assert.equal(plan(fine,{duration:1,minParticipants:2,maxSessions:2}).plans.length,0);
+});
