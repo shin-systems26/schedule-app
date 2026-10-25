@@ -80,13 +80,13 @@
               <div class="split-fields">
                 <div><label for="splitStartDate">対象の開始日</label><input id="splitStartDate" type="date" required></div>
                 <div><label for="splitEndDate">対象の終了日</label><input id="splitEndDate" type="date" required></div>
-                <div><label for="splitStartHour">開始時刻（時）</label><input id="splitStartHour" type="number" min="9" max="21" value="9" required></div>
-                <div><label for="splitEndHour">終了時刻（時）</label><input id="splitEndHour" type="number" min="10" max="22" value="22" required></div>
+                <div><label for="splitStartHour">開始時刻（時）</label><input id="splitStartHour" type="number" min="8" max="21" value="8" required></div>
+                <div><label for="splitEndHour">終了時刻（時）</label><input id="splitEndHour" type="number" min="9" max="22" value="22" required></div>
                 <div><label for="splitPriority">全員のカバーを優先した後は</label><select id="splitPriority"><option value="sessions">開催回数 → 主催者 → 避けたい時間 → 人数差</option><option value="early">避けたい時間 → 開催回数 → 主催者 → 人数差</option><option value="balanced">人数差 → 開催回数 → 主催者 → 避けたい時間</option></select></div>
               </div>
               <label class="check-label"><input id="splitAvoid" type="checkbox" checked>できるだけ避けたい時間帯を指定する</label>
               <div class="date-fields"><div><label for="splitAvoidStart">避けたい時間の開始（時）</label><input id="splitAvoidStart" type="number" min="0" max="23" value="21" required></div><div><label for="splitAvoidEnd">避けたい時間の終了（時）</label><input id="splitAvoidEnd" type="number" min="0" max="24" value="24" required></div></div>
-              <p class="hint">21〜24なら21時以降を避けます。必ず除外したい場合は対象の終了時刻を21にしてください。開始と終了が同じなら終日、開始が終了より後なら翌日にまたがる時間帯です。1時間単位で計算します。</p>
+              <p class="hint">21〜24なら21時以降を避けます。必ず除外したい場合は対象の終了時刻を21にしてください。開始と終了が同じなら終日、開始が終了より後なら翌日にまたがる時間帯です。所要時間は時間単位です。時間割形式の回答がある場合、開始時刻は10分刻みで探します。</p>
             </details>
             <div class="toolbar"><button id="splitCalculate" type="submit">組み合わせを提案</button><button id="splitCancel" type="button" class="secondary" hidden>計算を中止</button></div>
           </form>
@@ -98,6 +98,6 @@
     </div>
   </main>
   <footer>Smart Schedule Coordinator</footer>
-  <script type="module" src="./dashboard.js?v=conditional-1"></script>
+  <script type="module" src="./dashboard.js?v=timetable-1"></script>
 </body>
 </html>

@@ -1,9 +1,10 @@
-import { setupResponseView, clearResponseView } from './response-view.js';
-import { setupSplit, clearSplit } from './split-ui.js?v=conditional-1';
+import { candidateSlots, fineResolution } from './time-data.js?v=timetable-1';
+import { setupResponseView, clearResponseView } from './response-view.js?v=timetable-1';
+import { setupSplit, clearSplit } from './split-ui.js?v=timetable-1';
 import { db, auth, provider } from './firebase.js';
 import { onAuthStateChanged, signInWithPopup, signOut } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js';
 import { collection, doc, getDoc, getDocs, query, where, limit, addDoc, serverTimestamp, updateDoc, writeBatch, deleteDoc } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
-import { makeSlots, calculateRanking, renderRanking } from './ranking.js';
+import { calculateRanking, renderRanking } from './ranking.js?v=timetable-1';
 import { eventGroups } from './groups.js';
 
 const $ = id => document.getElementById(id);
@@ -119,8 +120,9 @@ async function openEvent(id) {
     }
     setupResponseView(data, responses);
     setupSplit(data, responses);
-    const slots = makeSlots(data.startDate, data.endDate);
+
     for (const [index, group] of eventGroups(data).entries()) {
+      const slots = candidateSlots(data.startDate, data.endDate, fineResolution(responses, group.id));
       renderRanking($('rankingArea'), `${index + 1}. ${group.title}`, calculateRanking(responses, group.id, slots), responses.length);
     }
   } catch (error) {

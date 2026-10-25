@@ -1,3 +1,4 @@
+import { parseRange, readInterval, rangeKey, fineResolution } from './time-data.js?v=timetable-1';
 import { eventGroups } from './groups.js';
 import { makeSlots } from './ranking.js';
 
@@ -26,7 +27,11 @@ function updateDates() {
   if (!current) return;
   const previous = $('answerDate').value;
   // Include stored dates even if they fall outside the current event period.
-  current.groupSlots = [...new Set([...current.slots, ...current.responses.flatMap(response => Object.keys(answersFor(response, $('answerGroup').value)))])].sort();
+  const group = $('answerGroup').value;
+  const ranges = [...current.slots, ...current.responses.flatMap(response => Object.keys(answersFor(response, group)))].map(parseRange).filter(Boolean);
+  const boundaries = new Map(), fine = fineResolution(current.responses, group);
+  for (const r of ranges) { if (!boundaries.has(r.date)) boundaries.set(r.date, new Set([fine ? 480 : 540, 1320])); boundaries.get(r.date).add(r.start).add(r.end); }
+  current.groupSlots = [...boundaries].sort(([a],[b])=>a.localeCompare(b)).flatMap(([date, edges])=>{const sorted=[...edges].sort((a,b)=>a-b);return sorted.slice(1).map((end,i)=>rangeKey(date,sorted[i],end));});
   const dates = [...new Set(current.groupSlots.map(slot => slot.split(' ')[0]))];
   $('answerDate').replaceChildren(...dates.map(date => option(date, date)));
   if (dates.includes(previous)) $('answerDate').value = previous;
@@ -49,7 +54,7 @@ function render() {
   for (const slot of current.groupSlots.filter(slot => slot.split(' ')[0] === date)) {
     const row = document.createElement('tr'), title = cell('th', slot); title.scope = 'row'; row.append(title);
     for (const {response} of people) {
-      const data = answersFor(response, group), value = data[slot];
+      const data = answersFor(response, group), range = parseRange(slot), value = readInterval(data, range.date, range.start, range.end);
       const known = Object.hasOwn(labels, value);
       const text = known ? labels[value] : value == null ? '—' : '不明';
       const td = cell('td', text);

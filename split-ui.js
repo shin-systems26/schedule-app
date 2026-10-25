@@ -1,5 +1,6 @@
+import { formatTime } from './time-data.js?v=timetable-1';
 import { eventGroups } from './groups.js';
-import { validateSettings } from './split-planner.js?v=conditional-1';
+import { validateSettings } from './split-planner.js?v=timetable-1';
 const $ = id => document.getElementById(id);
 const text = (tag, value) => { const element = document.createElement(tag); element.textContent = value; return element; };
 let worker = null, timeout = null, context = null;
@@ -46,11 +47,11 @@ function render(result) {
     card.append(text('p', `${plan.total}人中${plan.covered}人が${result.includeMaybe ? '確認できれば参加可能（確認後の見込み' : '参加可能（参加機会確保率'}${Math.round(plan.coverage * 10) / 10}％）${plan.complete ? (result.includeMaybe ? '・全員の確認が取れた場合' : '・全員の参加機会を確保') : '・全員をカバーできていません'}`));
     plan.sessions.forEach((session, i) => {
       const block = text('div', '');
-      block.append(text('h5', `練習${i + 1}：${session.date} ${String(session.start).padStart(2, '0')}:00〜${String(session.end).padStart(2, '0')}:00`));
+      block.append(text('h5', `練習${i + 1}：${session.date} ${formatTime(Math.round(session.start*60))}〜${formatTime(Math.round(session.end*60))}`));
       block.append(text('p', `${result.includeMaybe ? '参加候補' : '参加可能'}（${session.participants.length}人）：${session.participants.map(personLabel).join('、')}`));
       if (session.needsConfirmation?.length) block.append(text('p', `この日時の？を確認する人：${session.needsConfirmation.map(personLabel).join('、')}`));
       block.append(text('p', session.organizerAvailable === null ? '主催者：未指定・参加可否は未確認' : `主催者：${session.organizerAvailable ? '参加可能' : '参加可能と確認できません'}`));
-      if (session.avoidedHours) block.append(text('p', `避けたい時間帯を${session.avoidedHours}時間含みます。`));
+      if (session.avoidedHours) block.append(text('p', `避けたい時間帯を${Math.round(session.avoidedHours*60)}分含みます。`));
       card.append(block);
     });
     if (plan.uncovered.length) card.append(text('p', `参加機会を確保できない人：${plan.uncovered.map(personLabel).join('、')}`));
@@ -79,7 +80,7 @@ $('splitForm').onsubmit = event => {
       organizerId: $('splitOrganizer').value, requireOrganizer: $('splitRequire').checked, priority: $('splitPriority').value
     });
     if (settings.startDate < context.data.startDate || settings.endDate > context.data.endDate) throw Error('イベントの期間内を指定してください。');
-    worker = new Worker(new URL('./split-worker.js?v=conditional-1', import.meta.url), { type: 'module' });
+    worker = new Worker(new URL('./split-worker.js?v=timetable-1', import.meta.url), { type: 'module' });
     $('splitCalculate').disabled = true; $('splitCancel').hidden = false;
     $('splitStatus').textContent = '候補の組み合わせを計算中…';
     const activeWorker = worker;
