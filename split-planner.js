@@ -1,3 +1,4 @@
+import { readInterval, groupAnswers, fineResolution } from './time-data.js?v=timetable-1';
 // Pure planner: no Firebase access, no writes, and no reliance on display names as IDs.
 export const slotKey = (date, hour) => `${date} ${String(hour).padStart(2, '0')}:00〜${String(hour + 1).padStart(2, '0')}:00`;
 const count = mask => { let n = 0; while (mask) { mask &= mask - 1n; n++; } return n; };
@@ -11,7 +12,7 @@ export function validateSettings(settings) {
   const s = { ...settings };
   const from = dateValue(s.startDate), to = dateValue(s.endDate);
   if (to < from || to - from > 365 * 86400000) throw Error('対象期間は開始日から366日以内にしてください。');
-  for (const [key, min, max] of [['maxSessions', 1, 5], ['minParticipants', 1, 10000], ['duration', 1, 13], ['startHour', 9, 21], ['endHour', 10, 22], ['avoidStart', 0, 23], ['avoidEnd', 0, 24]]) {
+  for (const [key, min, max] of [['maxSessions', 1, 5], ['minParticipants', 1, 10000], ['duration', 1, 14], ['startHour', 8, 21], ['endHour', 9, 22], ['avoidStart', 0, 23], ['avoidEnd', 0, 24]]) {
     if (!Number.isInteger(s[key]) || s[key] < min || s[key] > max) throw Error('開催回数・人数・時間の設定を確認してください。');
   }
   if (s.endHour - s.startHour < s.duration) throw Error('対象時間帯が所要時間より短くなっています。');
@@ -29,15 +30,17 @@ export function planSplit(responses, group, settings, { maxNodes = 250000, top =
   const targets = responses.filter(r => r !== organizer);
   const all = (1n << BigInt(people.length)) - 1n;
   const available = (r, date, start, includeMaybe = false) => {
-    const answers = r.answers?.[group] || r[group] || {};
-    return Array.from({ length: s.duration }, (_, i) => ['yes', ...(includeMaybe ? ['maybe'] : [])].includes(answers[slotKey(date, start + i)])).every(Boolean);
+    const answer = readInterval(groupAnswers(r, group), date, Math.round(start * 60), Math.round((start + s.duration) * 60));
+    return answer === 'yes' || (includeMaybe && answer === 'maybe');
   };
   const avoided = hour => !s.avoidEnabled ? false : s.avoidStart === s.avoidEnd ? true : s.avoidStart < s.avoidEnd ? hour >= s.avoidStart && hour < s.avoidEnd : hour >= s.avoidStart || hour < s.avoidEnd;
+  const step = fineResolution(responses, group) ? 10 : 60;
   const candidates = [];
   let confirmedAnywhere = 0n;
   if (people.length) for (let time = dateValue(s.startDate); time <= dateValue(s.endDate); time += 86400000) {
     const date = new Date(time).toISOString().slice(0, 10);
-    for (let start = s.startHour; start + s.duration <= s.endHour; start++) {
+    for (let minute = s.startHour * 60; minute + s.duration * 60 <= s.endHour * 60; minute += step) {
+      const start = minute / 60;
       let mask = 0n, confirmedMask = 0n;
       targets.forEach((r, i) => {
         if (available(r, date, start)) confirmedMask |= 1n << BigInt(i);
@@ -46,7 +49,7 @@ export function planSplit(responses, group, settings, { maxNodes = 250000, top =
       confirmedAnywhere |= confirmedMask;
       const size = count(mask), host = organizer ? available(organizer, date, start) : null;
       if (size < s.minParticipants || (s.requireOrganizer && !host)) continue;
-      const late = Array.from({ length: s.duration }, (_, i) => avoided(start + i)).filter(Boolean).length;
+      const late = Array.from({ length: s.duration * 6 }, (_, i) => avoided((minute + i * 10) / 60)).filter(Boolean).length / 6;
       candidates.push({ date, start, end: start + s.duration, mask, confirmedMask, size, host, late });
     }
   }
@@ -64,7 +67,7 @@ export function planSplit(responses, group, settings, { maxNodes = 250000, top =
     if (chosen.length === depth) {
       const sessions = [...chosen].sort((a, b) => a.date.localeCompare(b.date) || a.start - b.start);
       const confirmedMask = sessions.reduce((mask, c) => mask | c.confirmedMask, 0n);
-      const plan = { confirmedMask, confirmedCovered: count(confirmedMask), sessions: sessions.length, covered: count(mask), mask, late: sessions.reduce((n, c) => n + c.late, 0), hostMisses: sessions.filter(c => c.host === false).length, imbalance: Math.max(...sessions.map(c => c.size)) - Math.min(...sessions.map(c => c.size)), key: sessions.map(c => `${c.date}-${String(c.start).padStart(2, '0')}`).join('|'), entries: sessions };
+      const plan = { confirmedMask, confirmedCovered: count(confirmedMask), sessions: sessions.length, covered: count(mask), mask, late: sessions.reduce((n, c) => n + c.late, 0), hostMisses: sessions.filter(c => c.host === false).length, imbalance: Math.max(...sessions.map(c => c.size)) - Math.min(...sessions.map(c => c.size)), key: sessions.map(c => `${c.date}-${String(Math.round(c.start * 60)).padStart(4, '0')}`).join('|'), entries: sessions };
       best.push(plan); best.sort(compare); if (best.length > top) best.pop();
     }
     if (chosen.length >= depth) return;

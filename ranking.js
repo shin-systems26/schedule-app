@@ -1,3 +1,4 @@
+import { parseRange, readInterval } from './time-data.js?v=timetable-1';
 export function makeSlots(
   startDate,
   endDate
@@ -121,9 +122,8 @@ export function calculateRanking(
               response[group] ||
               {};
 
-            const answer =
-              groupData[slot] ||
-              "maybe";
+            const range = parseRange(slot);
+            const answer = (range ? readInterval(groupData, range.date, range.start, range.end) : undefined) || "maybe";
 
             if (
               answer === "yes"
