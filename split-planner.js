@@ -12,9 +12,10 @@ export function validateSettings(settings) {
   const s = { ...settings };
   const from = dateValue(s.startDate), to = dateValue(s.endDate);
   if (to < from || to - from > 365 * 86400000) throw Error('対象期間は開始日から366日以内にしてください。');
-  for (const [key, min, max] of [['maxSessions', 1, 5], ['minParticipants', 1, 10000], ['duration', 1, 14], ['startHour', 8, 21], ['endHour', 9, 22], ['avoidStart', 0, 23], ['avoidEnd', 0, 24]]) {
+  for (const [key, min, max] of [['maxSessions', 1, 5], ['minParticipants', 1, 10000], ['startHour', 8, 21], ['endHour', 9, 22], ['avoidStart', 0, 23], ['avoidEnd', 0, 24]]) {
     if (!Number.isInteger(s[key]) || s[key] < min || s[key] > max) throw Error('開催回数・人数・時間の設定を確認してください。');
   }
+  if (!Number.isFinite(s.duration) || s.duration < 0.5 || s.duration > 14 || !Number.isInteger(s.duration * 2)) throw Error('所要時間は30分単位で指定してください。');
   if (s.endHour - s.startHour < s.duration) throw Error('対象時間帯が所要時間より短くなっています。');
   if (!['sessions', 'early', 'balanced'].includes(s.priority)) throw Error('優先条件を選択してください。');
   return s;
@@ -34,7 +35,7 @@ export function planSplit(responses, group, settings, { maxNodes = 250000, top =
     return answer === 'yes' || (includeMaybe && answer === 'maybe');
   };
   const avoided = hour => !s.avoidEnabled ? false : s.avoidStart === s.avoidEnd ? true : s.avoidStart < s.avoidEnd ? hour >= s.avoidStart && hour < s.avoidEnd : hour >= s.avoidStart || hour < s.avoidEnd;
-  const step = fineResolution(responses, group) ? 10 : 60;
+  const step = fineResolution(responses, group) ? 10 : s.duration % 1 ? 30 : 60;
   const candidates = [];
   let confirmedAnywhere = 0n;
   if (people.length) for (let time = dateValue(s.startDate); time <= dateValue(s.endDate); time += 86400000) {

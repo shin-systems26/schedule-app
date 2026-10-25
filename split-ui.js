@@ -1,6 +1,6 @@
 import { formatTime } from './time-data.js?v=timetable-1';
 import { eventGroups } from './groups.js';
-import { validateSettings } from './split-planner.js?v=timetable-1';
+import { validateSettings } from './split-planner.js?v=split-simple-1';
 const $ = id => document.getElementById(id);
 const text = (tag, value) => { const element = document.createElement(tag); element.textContent = value; return element; };
 let worker = null, timeout = null, context = null;
@@ -32,7 +32,7 @@ export function setupSplit(data, responses) {
 }
 function render(result) {
   const area = $('splitResults'); area.replaceChildren();
-  const caveat = result.truncated ? '探索上限に達したため暫定案です。最適性や最大参加人数は未保証です。期間や最大回数を絞って再計算してください。' : '指定条件内で候補を比較しました。';
+  const caveat = result.truncated ? '探索上限に達したため暫定案です。最適性や最大参加人数は未保証です。期間を絞って再計算してください。' : '指定条件内で候補を比較しました。';
   if (!result.people.length) { $('splitStatus').textContent = '対象となる回答者がいません。主催者以外の回答を集めてください。'; return; }
   $('splitStatus').textContent = `${result.candidateCount}件の開催候補から提案。${caveat}`;
   if (result.noConfirmedAvailability?.length) area.append(text('p', `この期間・時間帯・所要時間で○の候補がない人：${result.noConfirmedAvailability.map(personLabel).join('、')}。○だけでは100％にできません。？の候補を探して本人に確認してください。`));
@@ -71,22 +71,23 @@ $('splitForm').onsubmit = event => {
   event.preventDefault(); if (!context) return; stop();
   $('splitResults').replaceChildren(); $('splitSelection').textContent = '';
   try {
+    if (![0.5, 1].includes(Number($('splitDuration').value))) throw Error('開催時間は30分または1時間を選んでください。');
     const settings = validateSettings({
       includeMaybe: $('splitIncludeMaybe').checked,
       startDate: $('splitStartDate').value, endDate: $('splitEndDate').value,
-      maxSessions: Number($('splitMax').value), minParticipants: Number($('splitMin').value), duration: Number($('splitDuration').value),
+      maxSessions: 2, minParticipants: 2, duration: Number($('splitDuration').value),
       startHour: Number($('splitStartHour').value), endHour: Number($('splitEndHour').value),
       avoidStart: Number($('splitAvoidStart').value), avoidEnd: Number($('splitAvoidEnd').value), avoidEnabled: $('splitAvoid').checked,
       organizerId: $('splitOrganizer').value, requireOrganizer: $('splitRequire').checked, priority: $('splitPriority').value
     });
     if (settings.startDate < context.data.startDate || settings.endDate > context.data.endDate) throw Error('イベントの期間内を指定してください。');
-    worker = new Worker(new URL('./split-worker.js?v=timetable-1', import.meta.url), { type: 'module' });
+    worker = new Worker(new URL('./split-worker.js?v=split-simple-1', import.meta.url), { type: 'module' });
     $('splitCalculate').disabled = true; $('splitCancel').hidden = false;
     $('splitStatus').textContent = '候補の組み合わせを計算中…';
     const activeWorker = worker;
     worker.onmessage = ({ data }) => { if (worker !== activeWorker) return; stop(); if (data.error) $('splitStatus').textContent = data.error; else render(data.result); };
     worker.onerror = () => { if (worker !== activeWorker) return; stop(); $('splitStatus').textContent = '計算を実行できませんでした。ブラウザーを更新して再試行してください。'; };
-    timeout = setTimeout(() => { stop(); $('splitStatus').textContent = '計算時間の上限（20秒）に達しました。対象期間や最大開催回数を減らしてください。'; }, 20000);
+    timeout = setTimeout(() => { stop(); $('splitStatus').textContent = '計算時間の上限（20秒）に達しました。対象期間を短くしてください。'; }, 20000);
     worker.postMessage({ responses: context.responses, group: $('splitGroup').value, settings });
   } catch (error) { stop(); $('splitStatus').textContent = error.message; }
 };
