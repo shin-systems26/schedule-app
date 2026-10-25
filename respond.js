@@ -24,7 +24,15 @@ function cardFor(group,index){
   const status=message=>q('.edit-status').textContent=message;
   const remember=()=>{undo=structuredClone(drafts.get(group.id));undoButton.disabled=false;};
   const undoButton=button('直前の変更を元に戻す',()=>{if(!undo)return;drafts.set(group.id,undo);undo=null;undoButton.disabled=true;refresh();status('直前の変更を取り消しました。');});undoButton.disabled=true;
-  if(index>0)q('.copy-tools').append(button('①と同じ回答をコピー',()=>{remember();drafts.set(group.id,structuredClone(drafts.get(current.groups[0].id)));refresh();status('①の回答をコピーしました。');},'copy-button secondary'));
+  for(const [sourceIndex,source] of current.groups.entries()){
+    if(source.id===group.id)continue;
+    const label=`質問${sourceIndex+1}`;
+    const copyButton=button(`${label}からコピー`,()=>{remember();drafts.set(group.id,structuredClone(drafts.get(source.id)));refresh();status(`${label}「${source.title}」の回答をコピーしました。元に戻すこともできます。`);},'copy-button secondary');
+    copyButton.dataset.sourceGroup=source.id;copyButton.title=`${label}：${source.title}`;
+    copyButton.setAttribute('aria-label',`${label}「${source.title}」から回答をコピー`);
+    q('.copy-tools').append(copyButton);
+  }
+  if(current.groups.length>1)q('.copy-tools').after(element('p','コピーすると、この質問の曜日別の回答と特定日の修正が置き換わります。','hint'));
   q('.copy-tools').append(undoButton);
   const next=value=>({maybe:'yes',yes:'no',no:'maybe'}[value]);
   const paint=(b,value,label)=>{b.textContent=marks[value];b.className=`simple-button ${value}`;b.setAttribute('aria-label',`${label}：${marks[value]}`);};
