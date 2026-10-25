@@ -33,7 +33,7 @@ await test('削除キャンセル・805回答の分割削除・親イベント�
  fixture({responses:{one:Array.from({length:805},()=>({name:'回答者'}))}});await go('#manage=one');await until(()=>el('manageStatus').textContent.includes('805人'));window.confirmDelete=false;el('deleteEventButton').click();check(testFixture.writes.length===0,'Cancelled delete wrote');window.confirmDelete=true;el('deleteEventButton').click();await until(()=>el('appStatus').textContent.includes('削除しました'));check(JSON.stringify(testFixture.batches)==='[400,400,5]','Batch sizes');check(!testFixture.events.one && testFixture.responses.one.length===0,'Remaining data');check(testFixture.writes[0].data.isOpen===false,'Not closed before delete');
 });
 await test('旧参加者URL転送・questions互換・文字列を安全に表示・回答送信',async()=>{
- fixture({user:null,events:{one:{...event,groups:undefined,questions:[{id:'question1',title:'<img src=x onerror=alert(1)>'},{id:'question2',title:'オンライン'}]}}});await go('index.html?event=one');await until(()=>doc().querySelector('.simple-button'));check(frame.contentWindow.location.pathname.endsWith('/respond.html'),'Old URL not forwarded');check(!doc().querySelector('#cards img'),'Question title interpreted as HTML');el('name').value='参加者';doc().querySelector('[data-group="question1"] .weekly-detail').open=true;doc().querySelector('[data-group="question1"] .day-tabs').children[3].click();doc().querySelector('[data-group="question1"] [data-weekday="4"][data-period="class1"]').click();doc().querySelector('.copy-button').click();el('submitButton').click();await until(()=>el('submitButton').textContent==='送信済み');const response=testFixture.responses.one[0];check(response.answers.question1['2026-10-01 09:00〜10:30']==='yes','Wrong timetable interval');check(JSON.stringify(response.answers.question1)===JSON.stringify(response.answers.question2),'Copy failed');check(Object.keys(response.answers.question1).some(key=>key.startsWith('2026-10-02')),'Missing date');
+ fixture({user:null,events:{one:{...event,groups:undefined,questions:[{id:'question1',title:'<img src=x onerror=alert(1)>'},{id:'question2',title:'オンライン'}]}}});await go('index.html?event=one');await until(()=>doc().querySelector('.simple-button'));check(frame.contentWindow.location.pathname.endsWith('/respond.html'),'Old URL not forwarded');check(!doc().querySelector('#cards img'),'Question title interpreted as HTML');el('name').value='参加者';doc().querySelector('[data-group="question1"] [data-weekday="4"][data-period="class1"]').click();doc().querySelector('.copy-button').click();el('submitButton').click();await until(()=>el('submitButton').textContent==='送信済み');const response=testFixture.responses.one[0];check(response.answers.question1['2026-10-01 09:00〜10:30']==='yes','Wrong timetable interval');check(JSON.stringify(response.answers.question1)===JSON.stringify(response.answers.question2),'Copy failed');check(Object.keys(response.answers.question1).some(key=>key.startsWith('2026-10-02')),'Missing date');
 });
 await test('旧管理URL・作成URL・ログインURL転送',async()=>{
  fixture({user:null});await go('admin.html?event=one');await until(()=>el('loginPanel')&&!el('loginPanel').hidden);check(frame.contentWindow.location.hash==='#manage=one','Admin route lost');el('loginButton').click();await until(()=>el('manageStatus').textContent.includes('回答者数'));await go('create.html');await until(()=>el('createForm'));check(frame.contentWindow.location.hash==='#create','Create route lost');await go('login.html');await until(()=>el('loginPanel'));
@@ -100,22 +100,21 @@ await test('？を含める場合は要確認と確定人数を明示し、回�
  check(el('splitResults').textContent.includes('この日時の？を確認する人：B'),'Confirmation target missing');
  check(JSON.stringify(testFixture.responses)===before&&testFixture.writes.length===0,'Changed answers');
 });
-await test('まとめて入力・土日3区分・例外優先・取消とコピー・送信内容',async()=>{
- fixture({user:null,events:{one:{...event,startDate:'2026-10-26',endDate:'2026-11-01'}}});await go('respond.html?event=one');await until(()=>doc().querySelector('.quick-entry'));
+await test('平日7区分・土日3区分の表と10分マスの修正・コピー・保存',async()=>{
+ fixture({user:null,events:{one:{...event,startDate:'2026-10-26',endDate:'2026-11-02'}}});await go('respond.html?event=one');await until(()=>doc().querySelector('.simple-table'));
  const card=doc().querySelector('[data-group="group1"]'),q=s=>card.querySelector(s);
- q('.quick-entry [data-value="yes"]').click();check(q('.edit-status').textContent.includes('1つ以上'),'Missing selection validation');
- for(const d of ['1','3','5'])q('.days input[value="'+d+'"]').checked=true;q('.periods input[value="after"]').checked=true;q('[data-value="yes"]').click();
- q('.day-type').value='weekend';q('.day-type').dispatchEvent(new Event('change'));check(q('.periods').querySelectorAll('input').length===3,'Weekend not three choices');
- q('.days input[value="6"]').checked=true;q('.periods input[value="afternoon"]').checked=true;q('[data-value="yes"]').click();
- q('.exceptions').open=true;q('.exception-date').value='2026-10-31';q('.exception-start').value='14:00';q('.exception-end').value='15:30';q('.exception-add').click();check(q('.exception-list').textContent.includes('14:00〜15:30：×'),'Exception missing');
- q('[data-value="yes"]').click();check(q('.exception-list').textContent.includes('×'),'Batch erased exception');
- doc().querySelector('.copy-button').click();el('name').value='時間割テスト';el('submitButton').click();await until(()=>el('submitButton').textContent==='送信済み');
- const answer=testFixture.responses.one[0].answers;check(answer.group1['2026-10-26 17:50〜22:00']==='yes','After school boundary');check(answer.group1['2026-10-31 14:00〜15:30']==='no','Exception serialization');check(JSON.stringify(answer.group1)===JSON.stringify(answer.group2),'Copy mismatch');check(el('answerFields').disabled,'Can edit submitted answers');
+ check(q('.weekday-table').querySelectorAll('button').length===35,'Weekday cells');check(q('.weekend-table').querySelectorAll('button').length===6,'Weekend cells');check(!q('.quick-entry'),'Bulk UI retained');
+ q('[data-weekday="1"][data-period="after"]').click();q('.daily-detail').open=true;await until(()=>q('.detail-table'));
+ const cell=()=>q('[data-date="2026-10-26"][data-minute="1070"]');check(cell().textContent==='○','Weekly not reflected');cell().click();check(cell().textContent==='×','10-minute edit');
+ check(q('[data-date="2026-10-26"][data-minute="1080"]').textContent==='○','Adjacent cell modified');
+ q('.date-navigation').children[1].click();check(q('.page-range').textContent.includes('2026-11-02'),'Next page');q('.date-navigation').children[0].click();check(cell().textContent==='×','Page lost override');
+ doc().querySelector('.copy-button').click();el('name').value='表のテスト';el('submitButton').click();await until(()=>el('submitButton').textContent==='送信済み');
+ const answer=testFixture.responses.one[0].answers;check(answer.group1['2026-10-26 17:50〜18:00']==='no','Wrong saved interval');check(answer.group1['2026-10-26 18:00〜22:00']==='yes','Wrong remainder');check(JSON.stringify(answer.group1)===JSON.stringify(answer.group2),'Copy mismatch');
 });
-await test('日時指定の検証・取消・直前の変更を元に戻す',async()=>{
- fixture({user:null});await go('respond.html?event=one');await until(()=>doc().querySelector('.exceptions'));const card=doc().querySelector('[data-group="group1"]'),q=s=>card.querySelector(s);
- q('.exception-start').value='15:30';q('.exception-end').value='14:00';q('.exception-add').click();check(q('.edit-status').textContent.includes('10分単位'),'Invalid interval accepted');
- q('.exception-start').value='14:00';q('.exception-end').value='15:30';q('.exception-add').click();q('.exception-list button').click();check(q('.exception-list').textContent==='','Cancel failed');q('.copy-tools button').click();check(q('.exception-list').textContent.includes('14:00'),'Undo failed');
+await test('修正を元に戻す・曜日変更後も特定日の修正を保つ',async()=>{
+ fixture({user:null});await go('respond.html?event=one');await until(()=>doc().querySelector('.simple-table'));const card=doc().querySelector('[data-group="group1"]'),q=s=>card.querySelector(s);
+ q('.daily-detail').open=true;await until(()=>q('.detail-table'));q('[data-date="2026-10-01"][data-minute="540"]').click();q('.copy-tools button').click();check(q('[data-date="2026-10-01"][data-minute="540"]').textContent==='？','Undo failed');
+ q('[data-date="2026-10-01"][data-minute="540"]').click();q('[data-weekday="4"][data-period="class1"]').click();q('[data-weekday="4"][data-period="class1"]').click();check(q('[data-date="2026-10-01"][data-minute="540"]').textContent==='○','Override lost');check(q('[data-date="2026-10-01"][data-minute="550"]').textContent==='×','Weekly not applied elsewhere');
 });
 await test('時間割回答の管理表示・17:50開始のランキングと分割案',async()=>{
  const interval='2026-10-01 17:50〜18:50';fixture({responses:{one:[{name:'A',answers:{group1:{[interval]:'yes'}}},{name:'B',answers:{group1:{[interval]:'yes'}}}]}});
