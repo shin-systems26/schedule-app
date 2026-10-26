@@ -9,7 +9,7 @@ const options={startDate:day,endDate:day,maxSessions:2,minParticipants:2,duratio
 test('weekday has seven periods and weekend three; timetable boundaries exact',()=>{
  assert.equal(periodsFor(1).length,7);assert.equal(periodsFor(6).length,3);
  const d=newDraft();setWeekly(d,[1],['class2'],'yes',false);const a=serializeDraft(d,day,day);
- assert.equal(readInterval(a,day,640,730),'yes');assert.equal(readInterval(a,day,630,640),'maybe');assert.equal(readInterval(a,day,730,740),'maybe');
+ assert.equal(readInterval(a,day,640,730),'yes');assert.equal(readInterval(a,day,630,750),'yes');assert.equal(readInterval(a,day,600,630),'maybe');assert.equal(readInterval(a,day,750,780),'maybe');
 });
 test('batch weekdays and weekend independent; unknown gaps preserved',()=>{
  const d=newDraft();setWeekly(d,[1,3,5],['after'],'yes',false);setWeekly(d,[6,0],['afternoon'],'no',true);
@@ -47,3 +47,8 @@ test('ranking checks complete one-hour windows on ten-minute starts',()=>{
  const ranked=calculateRanking([r],'g',candidateSlots(day,day,true));assert.equal(ranked[0].slot,rangeKey(day,1070,1130));assert.equal(ranked[0].yes,1);
 });
 test('copy remains independent of source',()=>{const a=newDraft();setWeekly(a,[1],['after'],'yes',false);const b=structuredClone(a);setWeekly(b,[1],['after'],'no',false);assert.equal(a.weekly['1_after'],'yes');});
+
+test('rounded overlapping periods prioritize no without erasing selected periods',()=>{
+ const d=newDraft();setWeekly(d,[1],['class4'],'yes',false);let a=serializeDraft(d,day,day);assert.equal(readInterval(a,day,870,990),'yes');
+ setWeekly(d,[1],['class5'],'no',false);a=serializeDraft(d,day,day);assert.equal(readInterval(a,day,960,990),'no');assert.equal(readInterval(a,day,870,960),'yes');
+});
