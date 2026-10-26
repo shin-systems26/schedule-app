@@ -30,7 +30,16 @@ export function addException(draft, dates, exception) {
 export function expandDay(draft, date) {
   const values=Array(84).fill('maybe');
   const day=new Date(date+'T00:00:00Z').getUTCDay();
-  for(const period of periodsFor(day)) for(let t=period.start;t<period.end;t+=10) values[(t-480)/10]=draft.weekly[`${day}_${period.id}`] || 'maybe';
+  const assigned=new Set();
+  const priority={yes:0,maybe:1,no:2};
+  for(const period of periodsFor(day)) {
+    const answer=draft.weekly[`${day}_${period.id}`];if(!answer)continue;
+    for(let t=Math.floor(period.start/30)*30;t<Math.ceil(period.end/30)*30;t+=10){
+      const i=(t-480)/10;
+      if(!assigned.has(i)||priority[answer]>priority[values[i]])values[i]=answer;
+      assigned.add(i);
+    }
+  }
   // Exceptions always override weekly edits; later exceptions win, removal restores earlier settings.
   for(const exception of draft.exceptions.filter(e=>e.date===date)) for(let t=exception.start;t<exception.end;t+=10) values[(t-480)/10]=exception.answer;
   return values;
