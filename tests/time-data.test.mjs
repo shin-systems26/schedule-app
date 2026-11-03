@@ -52,3 +52,11 @@ test('rounded overlapping periods prioritize no without erasing selected periods
  const d=newDraft();setWeekly(d,[1],['class4'],'yes',false);let a=serializeDraft(d,day,day);assert.equal(readInterval(a,day,870,990),'yes');
  setWeekly(d,[1],['class5'],'no',false);a=serializeDraft(d,day,day);assert.equal(readInterval(a,day,960,990),'no');assert.equal(readInterval(a,day,870,960),'yes');
 });
+
+test('30-minute ranking covers half an hour without counting it as a full hour',()=>{
+ const responses=[{answers:{g:{[rangeKey(day,540,570)]:'yes',[rangeKey(day,570,600)]:'no'}}}];
+ const half=calculateRanking(responses,'g',candidateSlots(day,day,true,30));
+ assert.equal(half[0].slot,rangeKey(day,540,570));assert.equal(half[0].yes,1);
+ const full=calculateRanking(responses,'g',candidateSlots(day,day,true,60));assert.equal(full.find(r=>r.slot===rangeKey(day,540,600)).yes,0);
+ assert.ok(candidateSlots(day,day,false,30).includes(rangeKey(day,1290,1320)));
+});

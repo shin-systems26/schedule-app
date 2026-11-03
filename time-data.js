@@ -43,8 +43,9 @@ export function fineResolution(responses, group) {
     const r = parseRange(key); return r && (r.start % 60 || r.end % 60 || r.end-r.start !== 60 || r.start < 540);
   }));
 }
-export function candidateSlots(startDate, endDate, fine = false) {
+export function candidateSlots(startDate, endDate, fine = false, durationMinutes = 60) {
+  if (![30,60].includes(durationMinutes)) throw Error('開催時間は30分または1時間を指定してください。');
   return dateList(startDate, endDate).flatMap(date => {
-    const slots = []; for (let minute = fine ? 480 : 540; minute + 60 <= 1320; minute += fine ? 10 : 60) slots.push(rangeKey(date, minute, minute + 60)); return slots;
+    const slots = []; for (let minute = fine ? 480 : 540; minute + durationMinutes <= 1320; minute += fine ? 10 : durationMinutes) slots.push(rangeKey(date, minute, minute + durationMinutes)); return slots;
   });
 }

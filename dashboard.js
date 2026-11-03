@@ -1,4 +1,4 @@
-import { candidateSlots, fineResolution } from './time-data.js?v=timetable-1';
+import { candidateSlots, fineResolution } from './time-data.js?v=ranking-duration-1';
 import { setupResponseView, clearResponseView } from './response-view.js?v=timetable-1';
 import { setupSplit, clearSplit } from './split-ui.js?v=split-simple-1';
 import { db, auth, provider } from './firebase.js';
@@ -34,10 +34,24 @@ function clearDetail() {
   selected = null;
   $('management').hidden = true;
   $('rankingArea').replaceChildren();
+  $('rankingDuration').disabled=true; $('rankingDuration').value='60'; $('rankingDurationStatus').textContent='';
   $('responseNames').replaceChildren();
   $('copyStatus').textContent = '';
   detailButtons(true);
 }
+function updateRanking() {
+  $('rankingArea').replaceChildren();
+  if (!selected?.responses || !currentUser || selected.data.ownerId!==currentUser.uid) return;
+  const duration=Number($('rankingDuration').value);
+  if (![30,60].includes(duration)) return;
+  const {data,responses}=selected;
+  $('rankingDurationStatus').textContent=`${duration===60?'1時間':'30分'}を通して参加できる人数で集計しています。`;
+  for (const [index,group] of eventGroups(data).entries()) {
+    const slots=candidateSlots(data.startDate,data.endDate,fineResolution(responses,group.id),duration);
+    renderRanking($('rankingArea'),`${index+1}. ${group.title}`,calculateRanking(responses,group.id,slots),responses.length);
+  }
+}
+$('rankingDuration').onchange=updateRanking;
 function renderOpen() {
   const open = selected.data.isOpen !== false;
   $('openStatus').textContent = open ? '回答受付中' : '締切済み';
@@ -121,10 +135,9 @@ async function openEvent(id) {
     setupResponseView(data, responses);
     setupSplit(data, responses);
 
-    for (const [index, group] of eventGroups(data).entries()) {
-      const slots = candidateSlots(data.startDate, data.endDate, fineResolution(responses, group.id));
-      renderRanking($('rankingArea'), `${index + 1}. ${group.title}`, calculateRanking(responses, group.id, slots), responses.length);
-    }
+    selected.responses=responses;
+    $('rankingDuration').disabled=false;
+    updateRanking();
   } catch (error) {
     if (active()) {
       if (!selected) $('eventTitle').textContent = '管理画面を開けませんでした';

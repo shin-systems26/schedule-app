@@ -136,6 +136,16 @@ await test('3質問間の双方向コピー・独立編集・取り消し',async
  card('group2').querySelector('[data-source-group="group3"]').click();el('name').value='コピー検証';el('submitButton').click();await until(()=>el('submitButton').textContent==='送信済み');
  const a=testFixture.responses.one[0].answers;check(JSON.stringify(a.group2)===JSON.stringify(a.group3),'Date corrections not copied');check(a.group2['2026-10-01 09:00〜09:30']==='no','Specific override missing');
 });
+await test('ランキングを1時間と30分で切替・分割設定と独立・ログアウトで消去',async()=>{
+ fixture({responses:{one:[{name:'A',answers:{group1:{'2026-10-01 09:00〜09:30':'yes','2026-10-01 09:30〜10:00':'no'}}}]}});
+ await go('#manage=one');await until(()=>!el('rankingDuration').disabled);
+ const before=JSON.stringify(testFixture.responses);check(el('rankingDuration').value==='60','Default duration');
+ el('rankingDuration').value='30';el('rankingDuration').dispatchEvent(new Event('change'));
+ const row=el('rankingArea').querySelector('tbody tr');check(row.textContent.includes('09:00〜09:30'),'Wrong half-hour ranking');check(row.children[2].textContent.trim()==='1','Wrong half-hour count');check(el('splitDuration').value==='1','Split duration changed');
+ el('rankingDuration').value='60';el('rankingDuration').dispatchEvent(new Event('change'));check(el('rankingArea').querySelector('tbody tr').children[2].textContent.trim()==='0','Half hour counted as full hour');
+ check(JSON.stringify(testFixture.responses)===before&&testFixture.writes.length===0,'Ranking wrote responses');
+ el('logoutButton').click();await until(()=>el('dashboard').hidden);check(!el('rankingArea').textContent&&el('rankingDuration').disabled,'Ranking not cleared');
+});
 await test('時間割回答の管理表示・17:50開始のランキングと分割案',async()=>{
  const interval='2026-10-01 17:50〜18:50';fixture({responses:{one:[{name:'A',answers:{group1:{[interval]:'yes'}}},{name:'B',answers:{group1:{[interval]:'yes'}}}]}});
  await go('#manage=one');await until(()=>el('splitResults').textContent.includes('17:50〜18:50'));check(el('rankingArea').querySelector('tbody tr').textContent.includes(interval),'Ranking rounded time');
