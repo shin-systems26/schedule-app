@@ -1,4 +1,4 @@
-import { dateList, rangeKey } from './time-data.js?v=timetable-1';
+import { dateList, rangeKey } from './time-data.js?v=audit-1';
 export const WEEKDAYS = [1,2,3,4,5,6,0];
 export const DAY_NAMES = ['日','月','火','水','木','金','土'];
 export const weekdayPeriods = [

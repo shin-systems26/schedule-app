@@ -1,4 +1,4 @@
-import { parseRange, readInterval, rangeKey, fineResolution } from './time-data.js?v=timetable-1';
+import { parseRange, readInterval, rangeKey, fineResolution } from './time-data.js?v=audit-1';
 import { eventGroups } from './groups.js';
 import { makeSlots } from './ranking.js';
 
