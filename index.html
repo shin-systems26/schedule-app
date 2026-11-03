@@ -60,6 +60,9 @@
           <div id="answerTable" tabindex="0" role="region" aria-label="参加者別の回答表"></div>
         </details>
         <h3>みんなで集まる場合の日程ランキング</h3>
+        <label for="rankingDuration">ランキングの開催時間</label>
+        <select id="rankingDuration" disabled><option value="60" selected>1時間</option><option value="30">30分</option></select>
+        <p id="rankingDurationStatus" role="status"></p>
         <div id="rankingArea"></div>
         <section id="splitSection" hidden aria-labelledby="splitHeading">
           <h3 id="splitHeading">分割して練習・開催する場合</h3>
@@ -97,6 +100,6 @@
     </div>
   </main>
   <footer>Smart Schedule Coordinator</footer>
-  <script type="module" src="./dashboard.js?v=split-simple-1"></script>
+  <script type="module" src="./dashboard.js?v=ranking-duration-1"></script>
 </body>
 </html>
