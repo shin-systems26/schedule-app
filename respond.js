@@ -1,5 +1,5 @@
-import { dateList, formatTime } from './time-data.js?v=timetable-1';
-import { WEEKDAYS, DAY_NAMES, periodsFor, weekdayPeriods, weekendPeriods, newDraft, setWeekly, addException, expandDay, serializeDraft } from './response-model.js?v=half-hour-1';
+import { dateList, formatTime } from './time-data.js?v=audit-1';
+import { WEEKDAYS, DAY_NAMES, periodsFor, weekdayPeriods, weekendPeriods, newDraft, setWeekly, addException, expandDay, serializeDraft } from './response-model.js?v=audit-1';
 import './response.js';
 const $=id=>document.getElementById(id);
 const marks={yes:'○',no:'×',maybe:'？'};
@@ -38,8 +38,8 @@ function cardFor(group,index){
   const paint=(b,value,label)=>{b.textContent=marks[value];b.className=`simple-button ${value}`;b.setAttribute('aria-label',`${label}：${marks[value]}`);};
   function weeklyTable(days,periods,mount){
     const table=element('table',null,'simple-table');const head=element('thead'),row=element('tr');row.append(element('th','曜日'));
-    for(const p of periods){const th=element('th',p.name);th.scope='col';th.append(element('small',`${formatTime(p.start)}〜${formatTime(p.end)}`));row.append(th);}head.append(row);table.append(head);
-    const body=element('tbody');for(const day of days){const tr=element('tr');const th=element('th',DAY_NAMES[day]);th.scope='row';tr.append(th);for(const p of periods){const td=element('td');const b=button('',()=>{remember();const d=drafts.get(group.id);setWeekly(d,[day],[p.id],next(d.weekly[`${day}_${p.id}`]||'maybe'),day===0||day===6);refresh();status(`${DAY_NAMES[day]}曜の${p.name}を変更しました。`);});b.dataset.weekday=day;b.dataset.period=p.id;b.dataset.label=`${DAY_NAMES[day]}曜 ${p.name} ${formatTime(p.start)}〜${formatTime(p.end)}`;td.append(b);tr.append(td);}body.append(tr);}table.append(body);q(mount).append(table);
+    for(const p of periods){const th=element('th',p.name);th.scope='col';th.append(element('small',`${formatTime(Math.floor(p.start/30)*30)}〜${formatTime(Math.ceil(p.end/30)*30)}`));th.title=`元の時間：${formatTime(p.start)}〜${formatTime(p.end)}`;row.append(th);}head.append(row);table.append(head);
+    const body=element('tbody');for(const day of days){const tr=element('tr');const th=element('th',DAY_NAMES[day]);th.scope='row';tr.append(th);for(const p of periods){const td=element('td');const b=button('',()=>{remember();const d=drafts.get(group.id);setWeekly(d,[day],[p.id],next(d.weekly[`${day}_${p.id}`]||'maybe'),day===0||day===6);refresh();status(`${DAY_NAMES[day]}曜の${p.name}を変更しました。`);});b.dataset.weekday=day;b.dataset.period=p.id;b.dataset.label=`${DAY_NAMES[day]}曜 ${p.name} ${formatTime(Math.floor(p.start/30)*30)}〜${formatTime(Math.ceil(p.end/30)*30)}`;td.append(b);tr.append(td);}body.append(tr);}table.append(body);q(mount).append(table);
   }
   weeklyTable([1,2,3,4,5],weekdayPeriods,'.weekday-table');weeklyTable([6,0],weekendPeriods,'.weekend-table');
   const previous=button('前の7日',()=>{page=Math.max(0,page-7);buildGrid();}),following=button('次の7日',()=>{if(page+7<dates.length)page+=7;buildGrid();});q('.date-navigation').append(previous,following);
@@ -71,6 +71,7 @@ window.addEventListener('eventLoaded',event=>{
 $('submitButton').onclick=async()=>{
   if(busy || !current?.isOpen)return;
   const name=$('name').value.trim();if(!name){$('status').textContent='名前を入力してください。';$('name').focus();return;}
+  if(name.length>50){$('status').textContent='名前は50文字以内で入力してください。';$('name').focus();return;}
   const answers=Object.fromEntries(current.groups.map(g=>[g.id,serializeDraft(drafts.get(g.id),current.startDate,current.endDate)]));
   // Keep margin for field/index overhead under Firestore's 1 MiB document limit.
   if(new TextEncoder().encode(JSON.stringify({name,answers})).length>700000){$('status').textContent='回答データが大きすぎます。主催者にイベントの期間や質問数を減らしてもらってください。';return;}

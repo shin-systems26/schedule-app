@@ -1,10 +1,10 @@
-import { candidateSlots, fineResolution } from './time-data.js?v=ranking-duration-1';
-import { setupResponseView, clearResponseView } from './response-view.js?v=timetable-1';
-import { setupSplit, clearSplit } from './split-ui.js?v=split-simple-1';
+import { candidateSlots, answerStep, dateList } from './time-data.js?v=audit-1';
+import { setupResponseView, clearResponseView } from './response-view.js?v=audit-1';
+import { setupSplit, clearSplit } from './split-ui.js?v=audit-1';
 import { db, auth, provider } from './firebase.js';
 import { onAuthStateChanged, signInWithPopup, signOut } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js';
 import { collection, doc, getDoc, getDocs, query, where, limit, addDoc, serverTimestamp, updateDoc, writeBatch, deleteDoc } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
-import { calculateRanking, renderRanking } from './ranking.js?v=timetable-1';
+import { calculateRanking, renderRanking } from './ranking.js?v=audit-1';
 import { eventGroups } from './groups.js';
 
 const $ = id => document.getElementById(id);
@@ -45,9 +45,9 @@ function updateRanking() {
   const duration=Number($('rankingDuration').value);
   if (![30,60].includes(duration)) return;
   const {data,responses}=selected;
-  $('rankingDurationStatus').textContent=`${duration===60?'1時間':'30分'}を通して参加できる人数で集計しています。`;
+  $('rankingDurationStatus').textContent=`${duration===60?'1時間':'30分'}を通して参加できる人数で集計。○が多い順 → ×が少ない順 → 未回答が少ない順です。`;
   for (const [index,group] of eventGroups(data).entries()) {
-    const slots=candidateSlots(data.startDate,data.endDate,fineResolution(responses,group.id),duration);
+    const slots=candidateSlots(data.startDate,data.endDate,answerStep(responses,group.id),duration);
     renderRanking($('rankingArea'),`${index+1}. ${group.title}`,calculateRanking(responses,group.id,slots),responses.length);
   }
 }
@@ -192,6 +192,7 @@ $('createForm').onsubmit = async event => {
   const titles = $('questions').value.split('\n').map(text => text.trim()).filter(Boolean);
   if (!title || !startDate || !endDate || !titles.length) { report('createStatus', 'イベント名・期間・回答項目を入力してください。'); return; }
   if (endDate < startDate) { report('createStatus', '終了日は開始日以降にしてください。'); return; }
+  try { dateList(startDate,endDate); } catch(error) { report('createStatus',error.message); return; }
   const session = authVersion;
   createBusy = true;
   $('createButton').disabled = true;

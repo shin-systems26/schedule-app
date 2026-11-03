@@ -1,0 +1,62 @@
+rules_version = '2';
+
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+
+    match /events/{eventId} {
+
+
+      // イベント作成はログイン済みユーザーだけ
+      // さらに ownerId を自分のUIDにしなければ作れない
+      allow create:
+        if request.auth != null
+        && request.resource.data.ownerId == request.auth.uid;
+
+
+      // 参加者がタイトル・日付を取得するため公開
+      allow get: if true;
+      allow list: if request.auth != null
+        && resource.data.ownerId == request.auth.uid;
+
+
+      // 更新・削除はイベント作成者だけ
+      allow update, delete:
+        if request.auth != null
+        && resource.data.ownerId == request.auth.uid;
+
+
+
+
+      match /responses/{responseId} {
+
+
+        // 参加者は回答を送信できる
+        allow create:
+  if exists(
+    /databases/$(database)/documents/events/$(eventId)
+  )
+  && get(
+    /databases/$(database)/documents/events/$(eventId)
+  ).data.isOpen != false
+  && request.resource.data.name is string
+  && request.resource.data.name.size() > 0
+  && request.resource.data.name.size() <= 50
+  && request.resource.data.answers is map;
+
+
+        // 回答を見る・削除するのはイベント作成者だけ
+        allow read, delete:
+          if request.auth != null
+          && get(
+            /databases/$(database)/documents/events/$(eventId)
+          ).data.ownerId == request.auth.uid;
+
+
+        // 参加者が勝手に回答を書き換えるのは今は禁止
+        allow update: if false;
+      }
+    }
+  }
+}

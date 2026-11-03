@@ -1,4 +1,4 @@
-import { readInterval, groupAnswers, fineResolution } from './time-data.js?v=timetable-1';
+import { readInterval, groupAnswers, answerStep } from './time-data.js?v=audit-1';
 // Pure planner: no Firebase access, no writes, and no reliance on display names as IDs.
 export const slotKey = (date, hour) => `${date} ${String(hour).padStart(2, '0')}:00〜${String(hour + 1).padStart(2, '0')}:00`;
 const count = mask => { let n = 0; while (mask) { mask &= mask - 1n; n++; } return n; };
@@ -35,7 +35,7 @@ export function planSplit(responses, group, settings, { maxNodes = 250000, top =
     return answer === 'yes' || (includeMaybe && answer === 'maybe');
   };
   const avoided = hour => !s.avoidEnabled ? false : s.avoidStart === s.avoidEnd ? true : s.avoidStart < s.avoidEnd ? hour >= s.avoidStart && hour < s.avoidEnd : hour >= s.avoidStart || hour < s.avoidEnd;
-  const step = fineResolution(responses, group) ? 10 : s.duration % 1 ? 30 : 60;
+  const step = answerStep(responses, group);
   const candidates = [];
   let confirmedAnywhere = 0n;
   if (people.length) for (let time = dateValue(s.startDate); time <= dateValue(s.endDate); time += 86400000) {
