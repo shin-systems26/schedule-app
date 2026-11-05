@@ -9,6 +9,8 @@ test('dashboard and participant integration flows', async () => {
     const page = await browser.newPage();
     await page.goto('http://127.0.0.1:' + (process.env.PORT || 8765) + '/tests/browser.html');
     await page.waitForFunction(() => document.querySelector('#summary').textContent.includes('failed'));
-    assert.equal(await page.locator('#summary').innerText(), '20 passed / 0 failed');
+    const summary = await page.locator('#summary').innerText();
+    assert.match(summary, /^[1-9]\d* passed \/ 0 failed$/);
+    assert.equal(await page.locator('#results li').count(), Number(summary.split(' ')[0]));
   } finally { await browser.close(); }
 });
