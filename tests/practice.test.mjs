@@ -58,3 +58,33 @@ test('host excluded dates remove campus sessions only and rerun finds alternativ
  assert.throws(()=>planPractice(rs,{...settings,excludedDates:['2026-12-01']}));
  assert(planPractice(rs,settings).face.some(p=>p.sessions[0].date==='2026-11-02'));
 });
+
+test('practice planner matches independent exhaustive coverage for 120 mixed-campus cases',()=>{
+ let seed=1701;const random=()=>((seed=(seed*1664525+1013904223)>>>0)/2**32);
+ for(let trial=0;trial<120;trial++){
+  const rs=people(),slots=[['2026-11-04','09:00〜10:00',9],['2026-11-04','12:00〜13:00',12],['2026-11-05','09:00〜10:00',9],['2026-11-05','12:00〜13:00',12]];
+  const includeMaybe=trial%2===0,excludedDates=trial%3===0?['2026-11-04']:[],candidates=[];
+  for(const group of ['env','eng'])for(const [date,time,hour] of slots){
+   const answers=rs.map(()=>['yes','no','maybe',undefined][Math.floor(random()*4)]);
+   answers.forEach((a,i)=>{if(a)rs[i].answers[group][key(date,time)]=a;});
+   const ids=answers.flatMap((a,i)=>a==='yes'||includeMaybe&&a==='maybe'?[i]:[]);
+   if(!excludedDates.includes(date)&&ids.length>=2&&(group!=='eng'||answers[0]==='yes'))candidates.push({date,hour,ids});
+  }
+  let expected=0;
+  for(let i=0;i<candidates.length;i++){
+   expected=Math.max(expected,candidates[i].ids.length);
+   for(let j=i+1;j<candidates.length;j++){
+    const a=candidates[i],b=candidates[j];if(a.date===b.date&&Math.abs(a.hour-b.hour)<3)continue;
+    expected=Math.max(expected,new Set([...a.ids,...b.ids]).size);
+   }
+  }
+  const result=planPractice(rs,{...settings,includeMaybe,excludedDates});
+  assert.equal(result.truncated,false);assert.equal(result.face[0]?.covered||0,expected,'trial '+trial);
+  for(const p of result.face)assert.equal(p.covered,new Set(p.sessions.flatMap(s=>s.participants.map(r=>r.id))).size);
+ }
+});
+test('practice handles no responses, more than 32 people and identical display names',()=>{
+ assert.throws(()=>planPractice([],{...settings,requiredIds:['A']}));
+ const rs=Array.from({length:40},(_,i)=>({id:String(i),name:'同名',answers:{env:{[key('2026-11-04')]:'yes'},eng:{},online:{}}}));
+ const r=planPractice(rs,{...settings,requiredIds:['0','39']});assert.equal(r.face[0].covered,40);assert.equal(r.face[0].sessions.length,1);
+});
