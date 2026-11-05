@@ -162,9 +162,10 @@ await test('対面優先検索・必須メンバー・オンライン比較・�
  const groups=[{id:'online',title:'オンラインでやる場合'},{id:'env',title:'環境人間キャンパスでやる場合'},{id:'eng',title:'工学キャンパスでやる場合'}];
  fixture({events:{one:{...event,groups}},responses:{one:[{name:'A',answers:{env:{[slot]:'yes'},online:{[slot]:'yes'}}},{name:'B',answers:{env:{[slot]:'yes'},online:{[slot]:'yes'}}}]}});
  await go('#manage=one');await until(()=>el('practiceSection'));
- const area=el('practiceSection'),submit=area.querySelector('button');submit.click();await until(()=>area.textContent.includes('参加必須の人を選んで'));
+ const area=el('practiceSection'),submit=area.querySelector('button[type=submit]');submit.click();await until(()=>area.textContent.includes('参加必須の人を選んで'));
  area.querySelector('fieldset input').checked=true;submit.click();await until(()=>area.querySelector('.split-plan'));
  check(area.textContent.includes('2／2人'),'Coverage missing');check(area.textContent.includes('オンラインで全員参加する案'),'Online missing');check(area.querySelectorAll('.split-plan').length>=2,'No alternatives');check(testFixture.writes.length===0,'Planner wrote data');
+ el('practiceExcludedDate').value='2026-10-01';[...area.querySelectorAll('button')].find(b=>b.textContent==='除外日を追加').click();check(el('practiceExcludedDates').textContent.includes('2026-10-01'),'Exclude not added');submit.click();await until(()=>area.textContent.includes('対面の条件を満たす候補がありません'));check(area.querySelector('.split-plan').textContent.includes('オンライン'),'Online was excluded');el('practiceExcludedDates').querySelector('button').click();submit.click();await until(()=>area.querySelectorAll('.split-plan').length>=2);
  area.querySelector('fieldset input').dispatchEvent(new Event('input',{bubbles:true}));check(!area.querySelector('.split-plan'),'Stale result');
  el('logoutButton').click();await until(()=>!el('practiceSection'));
 });

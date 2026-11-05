@@ -1,4 +1,4 @@
-import { eventGroups } from './groups.js?v=practice-2';
+import { eventGroups } from './groups.js?v=practice-3';
 import { formatTime } from './time-data.js?v=audit-1';
 let section, worker, timer;
 const el=(tag,value='')=>{const e=document.createElement(tag);e.textContent=value;return e;};
@@ -18,6 +18,19 @@ export function setupPractice(data,responses){
   const labelPerson=p=>responses.filter(r=>r.name===p.name).length>1?`${p.name}［${p.id}］`:p.name;
   responses.forEach(r=>{const label=el('label',labelPerson(r)||'名前なし'),input=el('input');input.type='checkbox';input.value=r.id;label.prepend(input);required.append(label);});form.append(required);
   const maybe=el('input');maybe.type='checkbox';const ml=el('label','？も含めた確認用の案を探す（工学の必須メンバーは○が必要）');ml.prepend(maybe);form.append(ml);
+  const excludedDates=new Set(), dateLabel=el('label','主催者が対面に参加できない日'), dateInput=el('input');
+  dateInput.type='date';dateInput.min=data.startDate;dateInput.max=data.endDate;dateInput.id='practiceExcludedDate';dateLabel.append(dateInput);
+  const addDate=el('button','除外日を追加');addDate.type='button';
+  const dateList=el('div');dateList.id='practiceExcludedDates';
+  form.append(dateLabel,addDate,dateList,el('p','追加した日は対面のみ除外します。追加・解除後は「おすすめ練習日程を探す」で再検索してください。設定はこの画面内だけで有効です。'));
+  const renderDates=()=>{dateList.replaceChildren();for(const date of [...excludedDates].sort()){
+    const row=el('div',date+' '),remove=el('button','除外を解除');remove.type='button';remove.setAttribute('aria-label',date+'の除外を解除');
+    remove.onclick=()=>{excludedDates.delete(date);renderDates();form.dispatchEvent(new Event('input'));};row.append(remove);dateList.append(row);
+  }};
+  addDate.onclick=()=>{
+    const date=dateInput.value;if(!date||!dateInput.checkValidity()){status.textContent='イベント期間内の日付を選んでください。';return;}
+    excludedDates.add(date);dateInput.value='';renderDates();form.dispatchEvent(new Event('input'));
+  };
   const button=el('button','おすすめ練習日程を探す');button.type='submit';form.append(button);
   const status=el('p');status.setAttribute('role','status');const results=el('div');
   section.append(form,status,results);document.getElementById('splitSection').before(section);
@@ -26,9 +39,9 @@ export function setupPractice(data,responses){
   form.onsubmit=event=>{
     event.preventDefault();stop();results.replaceChildren();
     if(!responses.length){status.textContent='回答が集まってから検索できます。';return;}
-    const settings={startDate:data.startDate,endDate:data.endDate,requiredIds:[...required.querySelectorAll('input:checked')].map(i=>i.value),includeMaybe:maybe.checked};
+    const settings={startDate:data.startDate,endDate:data.endDate,requiredIds:[...required.querySelectorAll('input:checked')].map(i=>i.value),includeMaybe:maybe.checked,excludedDates:[...excludedDates]};
     Object.entries(selectors).forEach(([key,s])=>settings[key]=s.value);
-    worker=new Worker(new URL('./practice-worker.js?v=practice-2',import.meta.url),{type:'module'});const active=worker;
+    worker=new Worker(new URL('./practice-worker.js?v=practice-3',import.meta.url),{type:'module'});const active=worker;
     button.disabled=true;status.textContent='対面とオンラインの候補を比較しています…';
     worker.onmessage=({data:message})=>{
       if(worker!==active)return;stop();if(message.error){status.textContent=message.error;return;}
