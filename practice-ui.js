@@ -1,0 +1,52 @@
+import { eventGroups } from './groups.js?v=practice-1';
+import { formatTime } from './time-data.js?v=audit-1';
+let section, worker, timer;
+const el=(tag,value='')=>{const e=document.createElement(tag);e.textContent=value;return e;};
+export function clearPractice(){worker?.terminate();worker=null;clearTimeout(timer);section?.remove();section=null;}
+export function setupPractice(data,responses){
+  clearPractice();
+  section=el('section');section.id='practiceSection';
+  section.append(el('h3','おすすめ練習日程をまとめて探す'),el('p','対面を優先：平日19:00までに開始・1時間・各回2人以上・最大2回（別の日）。オンラインは土日・夜も含め22:00までに終了する1時間。主催者の予定は計算せず、最後にご自身で確認してください。'));
+  const form=el('form'),groups=eventGroups(data),selectors={};
+  for(const [key,label,pattern] of [['environmentGroup','環境人間キャンパスの回答項目',/環境|人間/],['engineeringGroup','工学キャンパスの回答項目',/工学/],['onlineGroup','オンラインの回答項目',/オンライン/]]){
+    const l=el('label',label),select=el('select');select.id='practice-'+key;select.add(new Option('回答項目を選択',''));
+    groups.forEach(g=>select.add(new Option(g.title,g.id)));select.value=groups.find(g=>pattern.test(g.title))?.id||'';l.append(select);form.append(l);selectors[key]=select;
+    if(select.value){l.hidden=true;}
+    else {l.append(el('small','既存イベントの回答項目を対応付けてください。'));}
+  }
+  const required=el('fieldset');required.append(el('legend','工学キャンパスで参加必須の人（複数選択）'));
+  const labelPerson=p=>responses.filter(r=>r.name===p.name).length>1?`${p.name}［${p.id}］`:p.name;
+  responses.forEach(r=>{const label=el('label',labelPerson(r)||'名前なし'),input=el('input');input.type='checkbox';input.value=r.id;label.prepend(input);required.append(label);});form.append(required);
+  const maybe=el('input');maybe.type='checkbox';const ml=el('label','？も含めた確認用の案を探す（工学の必須メンバーは○が必要）');ml.prepend(maybe);form.append(ml);
+  const button=el('button','おすすめ練習日程を探す');button.type='submit';form.append(button);
+  const status=el('p');status.setAttribute('role','status');const results=el('div');
+  section.append(form,status,results);document.getElementById('splitSection').before(section);
+  const stop=()=>{worker?.terminate();worker=null;clearTimeout(timer);button.disabled=false;};
+  form.oninput=()=>{stop();results.replaceChildren();status.textContent='条件を変更しました。もう一度検索してください。';};
+  form.onsubmit=event=>{
+    event.preventDefault();stop();results.replaceChildren();
+    if(!responses.length){status.textContent='回答が集まってから検索できます。';return;}
+    const settings={startDate:data.startDate,endDate:data.endDate,requiredIds:[...required.querySelectorAll('input:checked')].map(i=>i.value),includeMaybe:maybe.checked};
+    Object.entries(selectors).forEach(([key,s])=>settings[key]=s.value);
+    worker=new Worker(new URL('./practice-worker.js?v=practice-1',import.meta.url),{type:'module'});const active=worker;
+    button.disabled=true;status.textContent='対面とオンラインの候補を比較しています…';
+    worker.onmessage=({data:message})=>{
+      if(worker!==active)return;stop();if(message.error){status.textContent=message.error;return;}
+      const r=message.result;status.textContent=r.truncated?'対面は探索上限に達したため暫定案です。100％の案がないとは断定できません。':'指定条件内の候補を比較しました。';
+      if(r.includeMaybe)results.append(el('p','確認用の案です。？の人の参加が確認できるまで確定ではありません。'));
+      for(const [title,plans,empty] of [['対面のおすすめ（優先）',r.face,'対面の条件を満たす候補がありません。'],['オンラインで全員参加する案',r.online,'オンライン1回で全員を含む候補はありません。']]){
+        results.append(el('h4',title));if(!plans.length)results.append(el('p',empty));
+        plans.forEach((p,i)=>{
+          const card=el('article');card.className='split-plan';card.append(el('h5',`プラン${i+1}：${p.sessions.length}回・${p.covered}／${p.total}人${r.includeMaybe?'（確認後の見込み）':''}`));
+          if(r.includeMaybe)card.append(el('p',`○のみで確保：${p.confirmedCovered}／${p.total}人`));
+          p.sessions.forEach(s=>{card.append(el('p',`${s.date} ${formatTime(s.start)}〜${formatTime(s.end)}・${s.location}`),el('p',`参加${r.includeMaybe?'候補':'可能'}：${s.participants.map(labelPerson).join('、')}`));if(s.needsConfirmation.length)card.append(el('p',`？を確認する人：${s.needsConfirmation.map(labelPerson).join('、')}`));});
+          if(p.uncovered.length)card.append(el('p',`参加機会を確保できない人：${p.uncovered.map(labelPerson).join('、')}`));
+          results.append(card);
+        });
+      }
+      results.append(el('p','提案は保存・自動通知されません。主催者の予定を確認してから参加者に連絡してください。'));
+    };
+    worker.onerror=()=>{if(worker!==active)return;stop();status.textContent='計算できませんでした。ページを更新して再試行してください。';};
+    timer=setTimeout(()=>{stop();status.textContent='計算時間の上限に達しました。';},20000);worker.postMessage({responses,settings});
+  };
+}

@@ -1,0 +1,34 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {planPractice} from '../practice-planner.js';
+const settings={startDate:'2026-11-02',endDate:'2026-11-08',environmentGroup:'env',engineeringGroup:'eng',onlineGroup:'online',requiredIds:['A']};
+const key=(date,time='18:00〜19:00')=>`${date} ${time}`;
+const people=()=>['A','B','C','D','E'].map(id=>({id,name:id,answers:{env:{},eng:{},online:{}}}));
+const put=(rs,ids,group,slot,value='yes')=>rs.filter(r=>ids.includes(r.id)).forEach(r=>r.answers[group][slot]=value);
+test('different campuses cover all five; required member remains in denominator; online weekend late alternative',()=>{
+ const rs=people();put(rs,['A','B'],'env',key('2026-11-02'));put(rs,['A','C','D','E'],'eng',key('2026-11-03','19:00〜20:00'));put(rs,['A','B','C','D','E'],'online',key('2026-11-08','21:00〜22:00'));
+ const before=JSON.stringify(rs),r=planPractice(rs,settings);assert.equal(r.face[0].covered,5);assert.equal(r.face[0].sessions.length,2);assert.equal(r.online[0].covered,5);assert.equal(r.online[0].sessions[0].start,1260);assert.equal(JSON.stringify(rs),before);
+});
+test('all required engineering people need yes even in tentative mode',()=>{
+ const rs=people();put(rs,['A','B','C'],'eng',key('2026-11-02'));put(rs,['B'],'eng',key('2026-11-02'),'maybe');
+ assert.equal(planPractice(rs,{...settings,requiredIds:['A','B'],includeMaybe:true}).face.length,0);
+});
+test('reject weekend/late campus, short attendance and online ending after 22',()=>{
+ const rs=people();for(const slot of [key('2026-11-08'),key('2026-11-02','19:30〜20:30'),key('2026-11-03','18:00〜18:30')])put(rs,['A','B'],'env',slot);
+ put(rs,['A','B','C','D','E'],'online',key('2026-11-08','21:30〜22:30'));
+ const r=planPractice(rs,settings);assert.equal(r.face.length,0);assert.equal(r.online.length,0);
+});
+test('incomplete face retained alongside complete online; missing and maybe not confirmed',()=>{
+ const rs=people();put(rs,['A','B','C','D'],'env',key('2026-11-02'));put(rs,['E'],'env',key('2026-11-02'),'maybe');put(rs,['A','B','C','D','E'],'online',key('2026-11-08'));
+ const r=planPractice(rs,settings);assert.equal(r.face[0].covered,4);assert.equal(r.face[0].uncovered[0].id,'E');assert.equal(r.online[0].covered,5);
+ const t=planPractice(rs,{...settings,includeMaybe:true});assert.equal(t.face[0].covered,5);assert.equal(t.face[0].confirmedCovered,4);
+});
+test('one session preferred when full coverage; duplicate attendance counted once and same day not combined',()=>{
+ const rs=people();put(rs,['A','B','C'],'env',key('2026-11-02'));put(rs,['A','D','E'],'eng',key('2026-11-02','17:00〜18:00'));
+ assert.equal(planPractice(rs,settings).face[0].covered,3);
+ put(rs,['A','B','C','D','E'],'env',key('2026-11-03'));assert.equal(planPractice(rs,settings).face[0].sessions.length,1);
+});
+test('invalid mapping/required person rejected and truncated disclosed',()=>{
+ const rs=people();assert.throws(()=>planPractice(rs,{...settings,requiredIds:[]}));assert.throws(()=>planPractice(rs,{...settings,onlineGroup:'env'}));put(rs,['A','B'],'env',key('2026-11-02'));put(rs,['C','D'],'env',key('2026-11-03'));
+ assert.equal(planPractice(rs,settings,{maxPairs:0}).truncated,true);
+});

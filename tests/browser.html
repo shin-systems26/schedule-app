@@ -17,9 +17,9 @@ async function test(name,fn){const li=document.createElement('li');results.appen
 await test('未ログイン→ログイン、自分のイベントのみ表示',async()=>{
  fixture({user:null});await go('');await until(()=>!el('loginPanel').hidden);el('loginButton').click();await until(()=>doc().querySelectorAll('.event-item').length===1);check(!el('dashboard').hidden,'Dashboard missing');
 });
-await test('期間の検証→自由な質問でイベント作成→管理・共有リンク',async()=>{
- el('title').value='新しいイベント';el('startDate').value='2026-10-02';el('endDate').value='2026-10-01';el('questions').value='対面\nオンライン';el('createButton').click();await until(()=>el('createStatus').textContent.includes('終了日'));
- el('endDate').value='2026-10-03';el('createButton').click();await until(()=>el('manageStatus').textContent.includes('回答者数'));check(el('participantUrl').value.endsWith('respond.html?event=created'),'Wrong share link');check(el('rankingArea').querySelectorAll('h2').length===2,'Missing groups');
+await test('期間の検証→固定3質問でイベント作成→管理・共有リンク',async()=>{
+ el('title').value='新しいイベント';el('startDate').value='2026-10-02';el('endDate').value='2026-10-01';el('createButton').click();await until(()=>el('createStatus').textContent.includes('終了日'));
+ el('endDate').value='2026-10-03';el('createButton').click();await until(()=>el('manageStatus').textContent.includes('回答者数'));check(JSON.stringify(testFixture.events.created.groups.map(g=>g.id))===JSON.stringify(['online','env','eng']),'Fixed order');check(el('participantUrl').value.endsWith('respond.html?event=created'),'Wrong share link');check(el('rankingArea').querySelectorAll('h2').length===3,'Missing fixed groups');
 });
 await test('受付締切→再開→更新失敗時の状態維持',async()=>{
  el('toggleOpenButton').click();await until(()=>el('openStatus').textContent==='締切済み');el('toggleOpenButton').click();await until(()=>el('openStatus').textContent==='回答受付中');window.testFixture.failUpdate=true;el('toggleOpenButton').click();await until(()=>el('manageStatus').textContent.includes('変更できません'));check(!el('toggleOpenButton').disabled,'Retry disabled');check(el('openStatus').textContent==='回答受付中','State changed on failure');window.testFixture.failUpdate=false;
@@ -51,7 +51,7 @@ await test('ログイン失敗の原因別表示と再試行',async()=>{
 });
 await test('モード選択なしで作成・ランキングの下に分割調整を併記',async()=>{
  fixture();await go('#create');await until(()=>el('createButton')&&!el('createButton').disabled);
- el('title').value='分割練習';el('startDate').value='2026-10-01';el('endDate').value='2026-10-02';el('questions').value='対面';el('createButton').click();
+ el('title').value='分割練習';el('startDate').value='2026-10-01';el('endDate').value='2026-10-02';el('createButton').click();
  await until(()=>el('manageStatus').textContent.includes('回答者数'));
  check(!el('scheduleMode')&&!('scheduleMode' in testFixture.events.created),'Mode retained');check(!!(el('rankingArea').compareDocumentPosition(el('splitSection'))&4),'Split not below ranking');check(!el('splitSection').hidden,'Split not opened');check(el('rankingArea').textContent.includes('まだ集計できる回答がありません。'),'Empty ranking message missing');
 });
@@ -141,7 +141,7 @@ await test('未回答を加点しない・全員未回答の候補を表示し�
  el('rankingDuration').value='30';el('rankingDuration').dispatchEvent(new Event('change'));
  const row=el('rankingArea').querySelector('tbody tr');check(row.children[4].textContent==='0'&&row.children[6].textContent==='1','Missing treated as maybe');check(row.children[7].textContent.includes('未回答'),'Misleading evaluation');
  check(el('rankingArea').querySelectorAll('tbody tr').length===1,'All-missing slots displayed');
- el('title').value='長すぎる期間';el('startDate').value='2026-01-01';el('endDate').value='2027-01-02';el('questions').value='対面';el('createButton').click();await until(()=>el('createStatus').textContent.includes('366日'));check(testFixture.writes.length===0,'Invalid event saved');
+ el('title').value='長すぎる期間';el('startDate').value='2026-01-01';el('endDate').value='2027-01-02';el('createButton').click();await until(()=>el('createStatus').textContent.includes('366日'));check(testFixture.writes.length===0,'Invalid event saved');
 });
 await test('ランキングを1時間と30分で切替・分割設定と独立・ログアウトで消去',async()=>{
  fixture({responses:{one:[{name:'A',answers:{group1:{'2026-10-01 09:00〜09:30':'yes','2026-10-01 09:30〜10:00':'no'}}}]}});
@@ -157,6 +157,16 @@ await test('時間割回答の管理表示・17:50開始のランキングと分
  const interval='2026-10-01 17:50〜18:50';fixture({responses:{one:[{name:'A',answers:{group1:{[interval]:'yes'}}},{name:'B',answers:{group1:{[interval]:'yes'}}}]}});
  await go('#manage=one');await until(()=>el('splitResults').textContent.includes('17:50〜18:50'));check(el('rankingArea').querySelector('tbody tr').textContent.includes(interval),'Ranking rounded time');
  el('answerOverview').open=true;check(el('answerTable').textContent.includes('17:50〜18:00'),'Answer detail lost boundary');check(el('splitResults').textContent.includes('2人中2人'),'Coverage lost');
+});
+await test('対面優先検索・必須メンバー・オンライン比較・ログアウト消去',async()=>{
+ const groups=[{id:'online',title:'オンラインでやる場合'},{id:'env',title:'環境人間キャンパスでやる場合'},{id:'eng',title:'工学キャンパスでやる場合'}];
+ fixture({events:{one:{...event,groups}},responses:{one:[{name:'A',answers:{env:{[slot]:'yes'},online:{[slot]:'yes'}}},{name:'B',answers:{env:{[slot]:'yes'},online:{[slot]:'yes'}}}]}});
+ await go('#manage=one');await until(()=>el('practiceSection'));
+ const area=el('practiceSection'),submit=area.querySelector('button');submit.click();await until(()=>area.textContent.includes('参加必須の人を選んで'));
+ area.querySelector('fieldset input').checked=true;submit.click();await until(()=>area.querySelector('.split-plan'));
+ check(area.textContent.includes('2／2人'),'Coverage missing');check(area.textContent.includes('オンラインで全員参加する案'),'Online missing');check(area.querySelectorAll('.split-plan').length>=2,'No alternatives');check(testFixture.writes.length===0,'Planner wrote data');
+ area.querySelector('fieldset input').dispatchEvent(new Event('input',{bubbles:true}));check(!area.querySelector('.split-plan'),'Stale result');
+ el('logoutButton').click();await until(()=>!el('practiceSection'));
 });
 document.querySelector('#summary').textContent=`${passed} passed / ${failed} failed`;
 fixture();await go('#manage=one');

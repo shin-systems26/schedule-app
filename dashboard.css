@@ -47,3 +47,9 @@ select { width: 100%; min-width: 0; max-width: 100%; padding: 12px; border: 1px 
 .answer-yes { background: #e0f3e7; color: #165f36; }
 .answer-no { background: #fff0ed; color: #9b3025; }
 .answer-maybe, .answer-empty { color: #59686d; }
+
+#practiceSection { margin-top:28px; border-top:1px solid #dce5e1; }
+#practiceSection input[type="checkbox"] { width:auto; margin-right:10px; }
+#practiceSection fieldset { border:1px solid #dce5e1; border-radius:12px; min-width:0; }
+#practiceSection fieldset label { overflow-wrap:anywhere; }
+#practiceSection button { margin-top:16px; }
