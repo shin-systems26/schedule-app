@@ -46,3 +46,15 @@ test('same-day two-hour gap accepted, shorter gap and overlap rejected in either
   }
  }
 });
+
+test('host excluded dates remove campus sessions only and rerun finds alternative',()=>{
+ const rs=people();for(const day of ['2026-11-02','2026-11-03']){
+  put(rs,['A','B','C','D','E'],'env',key(day));put(rs,['A','B','C','D','E'],'eng',key(day));put(rs,['A','B','C','D','E'],'online',key(day));
+ }
+ const result=planPractice(rs,{...settings,excludedDates:['2026-11-02']});
+ assert(result.face.length>0);assert(result.face.every(p=>p.sessions.every(s=>s.date==='2026-11-03')));
+ assert(result.online.some(p=>p.sessions[0].date==='2026-11-02'));
+ assert.equal(planPractice(rs,{...settings,excludedDates:['2026-11-02','2026-11-03']}).face.length,0);
+ assert.throws(()=>planPractice(rs,{...settings,excludedDates:['2026-12-01']}));
+ assert(planPractice(rs,settings).face.some(p=>p.sessions[0].date==='2026-11-02'));
+});
