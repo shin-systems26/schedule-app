@@ -1,4 +1,4 @@
-import { eventGroups } from './groups.js?v=practice-1';
+import { eventGroups } from './groups.js?v=practice-2';
 import { formatTime } from './time-data.js?v=audit-1';
 let section, worker, timer;
 const el=(tag,value='')=>{const e=document.createElement(tag);e.textContent=value;return e;};
@@ -6,7 +6,7 @@ export function clearPractice(){worker?.terminate();worker=null;clearTimeout(tim
 export function setupPractice(data,responses){
   clearPractice();
   section=el('section');section.id='practiceSection';
-  section.append(el('h3','おすすめ練習日程をまとめて探す'),el('p','対面を優先：平日19:00までに開始・1時間・各回2人以上・最大2回（別の日）。オンラインは土日・夜も含め22:00までに終了する1時間。主催者の予定は計算せず、最後にご自身で確認してください。'));
+  section.append(el('h3','おすすめ練習日程をまとめて探す'),el('p','対面を優先：平日19:00までに開始・1時間・各回2人以上・最大2回（同じ日は終了から次の開始まで2時間以上）。オンラインは土日・夜も含め22:00までに終了する1時間。主催者の予定は計算せず、最後にご自身で確認してください。'));
   const form=el('form'),groups=eventGroups(data),selectors={};
   for(const [key,label,pattern] of [['environmentGroup','環境人間キャンパスの回答項目',/環境|人間/],['engineeringGroup','工学キャンパスの回答項目',/工学/],['onlineGroup','オンラインの回答項目',/オンライン/]]){
     const l=el('label',label),select=el('select');select.id='practice-'+key;select.add(new Option('回答項目を選択',''));
@@ -28,7 +28,7 @@ export function setupPractice(data,responses){
     if(!responses.length){status.textContent='回答が集まってから検索できます。';return;}
     const settings={startDate:data.startDate,endDate:data.endDate,requiredIds:[...required.querySelectorAll('input:checked')].map(i=>i.value),includeMaybe:maybe.checked};
     Object.entries(selectors).forEach(([key,s])=>settings[key]=s.value);
-    worker=new Worker(new URL('./practice-worker.js?v=practice-1',import.meta.url),{type:'module'});const active=worker;
+    worker=new Worker(new URL('./practice-worker.js?v=practice-2',import.meta.url),{type:'module'});const active=worker;
     button.disabled=true;status.textContent='対面とオンラインの候補を比較しています…';
     worker.onmessage=({data:message})=>{
       if(worker!==active)return;stop();if(message.error){status.textContent=message.error;return;}

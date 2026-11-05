@@ -23,7 +23,7 @@ test('incomplete face retained alongside complete online; missing and maybe not 
  const r=planPractice(rs,settings);assert.equal(r.face[0].covered,4);assert.equal(r.face[0].uncovered[0].id,'E');assert.equal(r.online[0].covered,5);
  const t=planPractice(rs,{...settings,includeMaybe:true});assert.equal(t.face[0].covered,5);assert.equal(t.face[0].confirmedCovered,4);
 });
-test('one session preferred when full coverage; duplicate attendance counted once and same day not combined',()=>{
+test('one session preferred when full coverage; duplicate attendance counted once and adjacent same-day sessions not combined',()=>{
  const rs=people();put(rs,['A','B','C'],'env',key('2026-11-02'));put(rs,['A','D','E'],'eng',key('2026-11-02','17:00〜18:00'));
  assert.equal(planPractice(rs,settings).face[0].covered,3);
  put(rs,['A','B','C','D','E'],'env',key('2026-11-03'));assert.equal(planPractice(rs,settings).face[0].sessions.length,1);
@@ -31,4 +31,18 @@ test('one session preferred when full coverage; duplicate attendance counted onc
 test('invalid mapping/required person rejected and truncated disclosed',()=>{
  const rs=people();assert.throws(()=>planPractice(rs,{...settings,requiredIds:[]}));assert.throws(()=>planPractice(rs,{...settings,onlineGroup:'env'}));put(rs,['A','B'],'env',key('2026-11-02'));put(rs,['C','D'],'env',key('2026-11-03'));
  assert.equal(planPractice(rs,settings,{maxPairs:0}).truncated,true);
+});
+
+test('same-day two-hour gap accepted, shorter gap and overlap rejected in either candidate order',()=>{
+ for(const second of ['11:00〜12:00','11:30〜12:30','12:00〜13:00','12:30〜13:30','09:30〜10:30']){
+  for(const reverse of [false,true]){
+   const rs=people();
+   put(rs,reverse?['A','B']:['A','B','C'],'env',key('2026-11-02','09:00〜10:00'));
+   put(rs,reverse?['A','C','D','E']:['A','D','E'],'eng',key('2026-11-02',second));
+   const r=planPractice(rs,settings);
+   const allowed=second.startsWith('12:');
+   assert.equal(r.face[0].covered===5,allowed,second+' reverse='+reverse);
+   if(allowed)assert.equal(r.face[0].sessions.length,2);
+  }
+ }
 });
