@@ -1,3 +1,8 @@
+export const practiceGroups = [
+  { id: 'online', title: 'オンラインでやる場合' },
+  { id: 'env', title: '環境人間キャンパスでやる場合' },
+  { id: 'eng', title: '工学キャンパスでやる場合' }
+];
 // Preserve IDs because response maps are keyed by them, including legacy events.
 export function eventGroups(data) {
   const fallback = [

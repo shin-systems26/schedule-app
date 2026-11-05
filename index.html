@@ -10,7 +10,7 @@
       location.replace(new URL('./respond.html' + location.search + location.hash, location.href).href);
     }
   </script>
-  <link rel="stylesheet" href="./dashboard.css">
+  <link rel="stylesheet" href="./dashboard.css?v=practice-1">
 </head>
 <body>
   <header class="page-header">
@@ -32,8 +32,7 @@
           <form id="createForm">
             <label for="title">イベント名</label><input id="title" name="title" required placeholder="例：ゼミの日程調整">
             <div class="date-fields"><div><label for="startDate">開始日</label><input id="startDate" type="date" required></div><div><label for="endDate">終了日</label><input id="endDate" type="date" required></div></div>
-            <label for="questions">回答項目</label><p id="questionHint" class="hint">条件を1行に1つ入力してください。各項目について参加可能な日時を回答できます。</p>
-            <textarea id="questions" rows="4" required aria-describedby="questionHint" placeholder="対面&#10;オンライン"></textarea>
+            <p>回答項目（固定）</p><ol id="fixedQuestions"><li>オンラインでやる場合</li><li>環境人間キャンパスでやる場合</li><li>工学キャンパスでやる場合</li></ol>
             <button id="createButton" type="submit">イベントを作成</button>
             <p id="createStatus" role="status"></p>
           </form>
@@ -100,6 +99,6 @@
     </div>
   </main>
   <footer>Smart Schedule Coordinator</footer>
-  <script type="module" src="./dashboard.js?v=audit-1"></script>
+  <script type="module" src="./dashboard.js?v=practice-1"></script>
 </body>
 </html>

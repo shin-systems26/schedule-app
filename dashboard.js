@@ -1,3 +1,4 @@
+import { setupPractice, clearPractice } from './practice-ui.js?v=practice-1';
 import { candidateSlots, answerStep, dateList } from './time-data.js?v=audit-1';
 import { setupResponseView, clearResponseView } from './response-view.js?v=audit-1';
 import { setupSplit, clearSplit } from './split-ui.js?v=audit-1';
@@ -5,7 +6,7 @@ import { db, auth, provider } from './firebase.js';
 import { onAuthStateChanged, signInWithPopup, signOut } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js';
 import { collection, doc, getDoc, getDocs, query, where, limit, addDoc, serverTimestamp, updateDoc, writeBatch, deleteDoc } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
 import { calculateRanking, renderRanking } from './ranking.js?v=audit-1';
-import { eventGroups } from './groups.js';
+import { eventGroups, practiceGroups } from './groups.js?v=practice-1';
 
 const $ = id => document.getElementById(id);
 let currentUser = null;
@@ -29,6 +30,7 @@ function detailButtons(disabled) {
 }
 function clearDetail() {
   clearSplit();
+  clearPractice();
   clearResponseView();
   detailVersion++;
   selected = null;
@@ -134,6 +136,7 @@ async function openEvent(id) {
     }
     setupResponseView(data, responses);
     setupSplit(data, responses);
+    setupPractice(data, responses);
 
     selected.responses=responses;
     $('rankingDuration').disabled=false;
@@ -189,8 +192,7 @@ $('createForm').onsubmit = async event => {
   const title = $('title').value.trim();
   const startDate = $('startDate').value;
   const endDate = $('endDate').value;
-  const titles = $('questions').value.split('\n').map(text => text.trim()).filter(Boolean);
-  if (!title || !startDate || !endDate || !titles.length) { report('createStatus', 'イベント名・期間・回答項目を入力してください。'); return; }
+  if (!title || !startDate || !endDate) { report('createStatus', 'イベント名・期間を入力してください。'); return; }
   if (endDate < startDate) { report('createStatus', '終了日は開始日以降にしてください。'); return; }
   try { dateList(startDate,endDate); } catch(error) { report('createStatus',error.message); return; }
   const session = authVersion;
@@ -200,7 +202,7 @@ $('createForm').onsubmit = async event => {
   try {
     const ref = await addDoc(collection(db, 'events'), {
       title, startDate, endDate, ownerId: currentUser.uid, isOpen: true,
-      groups: titles.map((title, index) => ({ id: `group${index + 1}`, title })),
+      groups: practiceGroups.map(group => ({ ...group })),
       createdAt: serverTimestamp()
     });
     if (session !== authVersion) return;
