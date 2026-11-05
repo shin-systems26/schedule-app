@@ -41,8 +41,8 @@ export function planPractice(responses, settings, {maxPairs=500000, top=3}={}) {
   outer:for(let i=0;i<campus.length;i++)for(let j=i+1;j<campus.length;j++){
     if(pairs++>=maxPairs){truncated=true;break outer;}
     const a=campus[i],b=campus[j];
-    // Different dates avoid overlapping sessions and uncertain campus travel time.
-    if(a.date===b.date)continue;
+    // Same-day sessions need at least two hours from the earlier end to the later start.
+    if(a.date===b.date && Math.max(a.start,b.start)-Math.min(a.end,b.end)<120)continue;
     add([a,b]);
   }
   const serialize=p=>({covered:p.covered,confirmedCovered:p.confirmedCovered,total:people.length,complete:p.covered===people.length,uncovered:members(((1n<<BigInt(people.length))-1n)^p.mask),sessions:p.entries.map(e=>({date:e.date,start:e.start,end:e.end,location:e.location,participants:members(e.mask),needsConfirmation:members(e.mask&~e.confirmed)}))});
