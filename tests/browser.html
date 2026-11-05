@@ -169,6 +169,41 @@ await test('対面優先検索・必須メンバー・オンライン比較・�
  area.querySelector('fieldset input').dispatchEvent(new Event('input',{bubbles:true}));check(!area.querySelector('.split-plan'),'Stale result');
  el('logoutButton').click();await until(()=>!el('practiceSection'));
 });
+await test('期間外の11月4日でも検索は無反応にならず理由を表示する',async()=>{
+ fixture({events:{one:{...event,groups:[{id:'online',title:'オンライン'},{id:'env',title:'環境人間'},{id:'eng',title:'工学'}]}},responses:{one:[{name:'A',answers:{env:{[slot]:'yes'}}},{name:'B',answers:{env:{[slot]:'yes'}}}]}});
+ await go('#manage=one');await until(()=>el('practiceSection'));
+ const area=el('practiceSection');area.querySelector('fieldset input').checked=true;
+ el('practiceExcludedDate').value='2026-11-04';area.querySelector('button[type=submit]').click();
+ await until(()=>area.querySelector('[role=status]').textContent.includes('2026-10-01'));
+ check(area.querySelector('[role=status]').textContent.includes('2026-10-02'),'Range not explained');
+});
+await test('11月4日を直接入力して検索・重複・複数除外・全日除外・解除・期間外から復帰',async()=>{
+ const dates=['2026-11-04','2026-11-05'],groups=[{id:'online',title:'オンライン'},{id:'env',title:'環境人間'},{id:'eng',title:'工学'}];
+ const answers=Object.fromEntries(groups.map(g=>[g.id,Object.fromEntries(dates.map(d=>[d+' 18:00〜19:00','yes']))]));
+ fixture({events:{one:{...event,startDate:dates[0],endDate:dates[1],groups}},responses:{one:[{name:'A',answers:structuredClone(answers)},{name:'B',answers:structuredClone(answers)}]}});
+ await go('#manage=one');await until(()=>el('practiceSection'));
+ const area=el('practiceSection'),form=area.querySelector('form'),submit=area.querySelector('button[type=submit]'),date=el('practiceExcludedDate');area.querySelector('fieldset input').checked=true;
+ const search=async()=>{submit.click();await until(()=>el('practiceStatus').textContent.includes('指定条件内'));};
+ date.value='2026-11-04';await search();check(el('practiceExcludedDates').children.length===1,'Direct date ignored');
+ check(area.querySelector('.split-plan').textContent.includes('2026-11-05'),'Excluded date recommended');
+ date.value='2026-11-04';await search();check(el('practiceExcludedDates').children.length===1,'Duplicate date');
+ date.value='2026-11-05';await search();check(area.textContent.includes('対面の条件を満たす候補がありません'),'All dates not excluded');check(area.querySelector('.split-plan').textContent.includes('オンライン'),'Online removed');
+ el('practiceExcludedDates').querySelector('button').click();await search();check(area.querySelector('.split-plan').textContent.includes('2026-11-04'),'Removal failed');
+ date.value='2026-11-06';submit.click();check(el('practiceStatus').textContent.includes('2026-11-05'),'No invalid feedback');check(!submit.disabled,'Invalid input locked button');
+ date.value='';await search();check(area.querySelector('.split-plan'),'Recovery failed');
+ const add=[...area.querySelectorAll('button')].find(b=>b.textContent==='除外日を追加');add.click();check(el('practiceStatus').textContent.includes('すべて入力'),'Empty add silent');await search();
+ // Start then edit immediately: cancelled worker must not restore stale results.
+ submit.click();date.value='2026-11-04';date.dispatchEvent(new Event('input',{bubbles:true}));await pause();await pause();check(!area.querySelector('.split-plan')&&!submit.disabled,'Stale worker result');await search();
+ check(testFixture.writes.length===0,'Search wrote data');
+});
+await test('練習検索のWorker起動失敗から再試行できる',async()=>{
+ fixture();await go('#manage=one');await until(()=>el('practiceSection'));
+ // Empty data does not start a worker; seed a response before loading.
+ testFixture.responses.one=[{name:'A'},{name:'B'}];await go('#manage=one');await until(()=>el('practiceSection').querySelector('fieldset input'));
+ const RealWorker=frame.contentWindow.Worker;frame.contentWindow.Worker=class {constructor(){throw Error('test failure');}};
+ const submit=el('practiceSection').querySelector('button[type=submit]');submit.click();check(el('practiceStatus').textContent.includes('開始できません'),'Silent worker failure');check(!submit.disabled,'Retry disabled');
+ frame.contentWindow.Worker=RealWorker;submit.click();await until(()=>!submit.disabled);check(!el('practiceStatus').textContent.includes('開始できません'),'Retry failed');
+});
 document.querySelector('#summary').textContent=`${passed} passed / ${failed} failed`;
 fixture();await go('#manage=one');
 </script></body></html>
