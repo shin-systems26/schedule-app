@@ -1,5 +1,5 @@
-import { eventGroups } from './groups.js?v=practice-3';
-import { formatTime } from './time-data.js?v=audit-1';
+import { eventGroups } from './groups.js?v=practice-4';
+import { formatTime, validDate } from './time-data.js?v=audit-1';
 let section, worker, timer;
 const el=(tag,value='')=>{const e=document.createElement(tag);e.textContent=value;return e;};
 export function clearPractice(){worker?.terminate();worker=null;clearTimeout(timer);section?.remove();section=null;}
@@ -8,6 +8,8 @@ export function setupPractice(data,responses){
   section=el('section');section.id='practiceSection';
   section.append(el('h3','おすすめ練習日程をまとめて探す'),el('p','対面を優先：平日19:00までに開始・1時間・各回2人以上・最大2回（同じ日は終了から次の開始まで2時間以上）。オンラインは土日・夜も含め22:00までに終了する1時間。主催者の予定は計算せず、最後にご自身で確認してください。'));
   const form=el('form'),groups=eventGroups(data),selectors={};
+  // Handle validation visibly instead of letting native date validation suppress submit.
+  form.noValidate=true;
   for(const [key,label,pattern] of [['environmentGroup','環境人間キャンパスの回答項目',/環境|人間/],['engineeringGroup','工学キャンパスの回答項目',/工学/],['onlineGroup','オンラインの回答項目',/オンライン/]]){
     const l=el('label',label),select=el('select');select.id='practice-'+key;select.add(new Option('回答項目を選択',''));
     groups.forEach(g=>select.add(new Option(g.title,g.id)));select.value=groups.find(g=>pattern.test(g.title))?.id||'';l.append(select);form.append(l);selectors[key]=select;
@@ -22,26 +24,34 @@ export function setupPractice(data,responses){
   dateInput.type='date';dateInput.min=data.startDate;dateInput.max=data.endDate;dateInput.id='practiceExcludedDate';dateLabel.append(dateInput);
   const addDate=el('button','除外日を追加');addDate.type='button';
   const dateList=el('div');dateList.id='practiceExcludedDates';
-  form.append(dateLabel,addDate,dateList,el('p','追加した日は対面のみ除外します。追加・解除後は「おすすめ練習日程を探す」で再検索してください。設定はこの画面内だけで有効です。'));
+  form.append(dateLabel,addDate,dateList,el('p','追加した日は対面のみ除外します。日付を入力して直接検索しても除外に反映します。追加・解除後は再検索してください。設定はこの画面内だけで有効です。'));
   const renderDates=()=>{dateList.replaceChildren();for(const date of [...excludedDates].sort()){
     const row=el('div',date+' '),remove=el('button','除外を解除');remove.type='button';remove.setAttribute('aria-label',date+'の除外を解除');
     remove.onclick=()=>{excludedDates.delete(date);renderDates();form.dispatchEvent(new Event('input'));};row.append(remove);dateList.append(row);
   }};
-  addDate.onclick=()=>{
-    const date=dateInput.value;if(!date||!dateInput.checkValidity()){status.textContent='イベント期間内の日付を選んでください。';return;}
-    excludedDates.add(date);dateInput.value='';renderDates();form.dispatchEvent(new Event('input'));
+  const applyDate=(required=false)=>{
+    const date=dateInput.value;
+    if(!date&&!dateInput.validity.badInput&&!required)return true;
+    if(!validDate(date)||!dateInput.validity.valid||date<data.startDate||date>data.endDate){
+      status.textContent=`除外日は ${data.startDate} 〜 ${data.endDate} の範囲で、年・月・日をすべて入力してください。`;
+      dateInput.setAttribute('aria-invalid','true');return false;
+    }
+    excludedDates.add(date);dateInput.value='';dateInput.removeAttribute('aria-invalid');renderDates();return true;
   };
+  addDate.onclick=()=>{stop();results.replaceChildren();if(applyDate(true))status.textContent='除外日を追加しました。もう一度検索してください。';};
   const button=el('button','おすすめ練習日程を探す');button.type='submit';form.append(button);
-  const status=el('p');status.setAttribute('role','status');const results=el('div');
+  const status=el('p');status.id='practiceStatus';status.setAttribute('role','status');dateInput.setAttribute('aria-describedby','practiceStatus');const results=el('div');
   section.append(form,status,results);document.getElementById('splitSection').before(section);
   const stop=()=>{worker?.terminate();worker=null;clearTimeout(timer);button.disabled=false;};
   form.oninput=()=>{stop();results.replaceChildren();status.textContent='条件を変更しました。もう一度検索してください。';};
   form.onsubmit=event=>{
     event.preventDefault();stop();results.replaceChildren();
+    if(!applyDate())return;
     if(!responses.length){status.textContent='回答が集まってから検索できます。';return;}
     const settings={startDate:data.startDate,endDate:data.endDate,requiredIds:[...required.querySelectorAll('input:checked')].map(i=>i.value),includeMaybe:maybe.checked,excludedDates:[...excludedDates]};
     Object.entries(selectors).forEach(([key,s])=>settings[key]=s.value);
-    worker=new Worker(new URL('./practice-worker.js?v=practice-3',import.meta.url),{type:'module'});const active=worker;
+    try {
+    worker=new Worker(new URL('./practice-worker.js?v=practice-4',import.meta.url),{type:'module'});const active=worker;
     button.disabled=true;status.textContent='対面とオンラインの候補を比較しています…';
     worker.onmessage=({data:message})=>{
       if(worker!==active)return;stop();if(message.error){status.textContent=message.error;return;}
@@ -61,5 +71,6 @@ export function setupPractice(data,responses){
     };
     worker.onerror=()=>{if(worker!==active)return;stop();status.textContent='計算できませんでした。ページを更新して再試行してください。';};
     timer=setTimeout(()=>{stop();status.textContent='計算時間の上限に達しました。';},20000);worker.postMessage({responses,settings});
+    } catch(error) {stop();status.textContent='計算を開始できませんでした。ページを更新して再試行してください。';}
   };
 }

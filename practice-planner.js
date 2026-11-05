@@ -13,11 +13,11 @@ export function planPractice(responses, settings, {maxPairs=500000, top=3}={}) {
   const count=m=>{let n=0;while(m){m&=m-1n;n++;}return n;};
   const members=m=>people.filter((_,i)=>m&(1n<<BigInt(i)));
   const build=(group,location,online=false)=>{
-    const out=[];
+    const out=[], step=answerStep(responses,group);
     for(const date of dates){
       const day=new Date(date+'T00:00:00Z').getUTCDay();
       if(!online&&(day===0||day===6||excludedDates.has(date)))continue;
-      for(let start=480;start<=(online?1260:1140);start+=answerStep(responses,group)){
+      for(let start=480;start<=(online?1260:1140);start+=step){
         const answers=responses.map(r=>readInterval(groupAnswers(r,group),date,start,start+60));
         if(group===engineeringGroup&&!requiredIds.every(id=>answers[ids.indexOf(id)]==='yes'))continue;
         let mask=0n,confirmed=0n;
