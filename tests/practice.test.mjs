@@ -88,3 +88,17 @@ test('practice handles no responses, more than 32 people and identical display n
  const rs=Array.from({length:40},(_,i)=>({id:String(i),name:'同名',answers:{env:{[key('2026-11-04')]:'yes'},eng:{},online:{}}}));
  const r=planPractice(rs,{...settings,requiredIds:['0','39']});assert.equal(r.face[0].covered,40);assert.equal(r.face[0].sessions.length,1);
 });
+
+test('online exclusions are independent, validated, reversible and leave source data intact',()=>{
+ const rs=people(),days=['2026-11-04','2026-11-05'];
+ for(const day of days)for(const group of ['env','eng','online'])put(rs,rs.map(r=>r.id),group,key(day));
+ const before=JSON.stringify(rs);
+ const r=planPractice(rs,{...settings,excludedDates:[days[0]],onlineExcludedDates:[days[1],days[1]]});
+ assert(r.face.length&&r.online.length);
+ assert(r.face.every(p=>p.sessions.every(s=>s.date===days[1])));
+ assert(r.online.every(p=>p.sessions.every(s=>s.date===days[0])));
+ const all=planPractice(rs,{...settings,onlineExcludedDates:days});assert.equal(all.online.length,0);assert(all.face.length);
+ assert(planPractice(rs,settings).online.length);
+ for(const date of ['2026-11-09','2026-02-30','invalid'])assert.throws(()=>planPractice(rs,{...settings,onlineExcludedDates:[date]}),/オンライン/);
+ assert.equal(JSON.stringify(rs),before);
+});

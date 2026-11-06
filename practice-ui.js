@@ -1,4 +1,4 @@
-import { eventGroups } from './groups.js?v=practice-4';
+import { eventGroups } from './groups.js?v=practice-5';
 import { formatTime, validDate } from './time-data.js?v=audit-1';
 let section, worker, timer;
 const el=(tag,value='')=>{const e=document.createElement(tag);e.textContent=value;return e;};
@@ -20,38 +20,44 @@ export function setupPractice(data,responses){
   const labelPerson=p=>responses.filter(r=>r.name===p.name).length>1?`${p.name}［${p.id}］`:p.name;
   responses.forEach(r=>{const label=el('label',labelPerson(r)||'名前なし'),input=el('input');input.type='checkbox';input.value=r.id;label.prepend(input);required.append(label);});form.append(required);
   const maybe=el('input');maybe.type='checkbox';const ml=el('label','？も含めた確認用の案を探す（工学の必須メンバーは○が必要）');ml.prepend(maybe);form.append(ml);
-  const excludedDates=new Set(), dateLabel=el('label','主催者が対面に参加できない日'), dateInput=el('input');
-  dateInput.type='date';dateInput.min=data.startDate;dateInput.max=data.endDate;dateInput.id='practiceExcludedDate';dateLabel.append(dateInput);
-  const addDate=el('button','除外日を追加');addDate.type='button';
-  const dateList=el('div');dateList.id='practiceExcludedDates';
-  form.append(dateLabel,addDate,dateList,el('p','追加した日は対面のみ除外します。日付を入力して直接検索しても除外に反映します。追加・解除後は再検索してください。設定はこの画面内だけで有効です。'));
+  const makeDates=(label,inputId,listId,addLabel)=>{
+  const excludedDates=new Set(), dateLabel=el('label',label), dateInput=el('input');
+  dateInput.type='date';dateInput.min=data.startDate;dateInput.max=data.endDate;dateInput.id=inputId;dateLabel.append(dateInput);
+  const addDate=el('button',addLabel);addDate.type='button';
+  const dateList=el('div');dateList.id=listId;
+  form.append(dateLabel,addDate,dateList,el('p','追加した日はこの形式のみ除外します。日付を入力して直接検索しても除外に反映します。追加・解除後は再検索してください。設定はこの画面内だけで有効です。'));
   const renderDates=()=>{dateList.replaceChildren();for(const date of [...excludedDates].sort()){
-    const row=el('div',date+' '),remove=el('button','除外を解除');remove.type='button';remove.setAttribute('aria-label',date+'の除外を解除');
+    const row=el('div',date+' '),remove=el('button','除外を解除');remove.type='button';remove.setAttribute('aria-label',label+'：'+date+'の除外を解除');
     remove.onclick=()=>{excludedDates.delete(date);renderDates();form.dispatchEvent(new Event('input'));};row.append(remove);dateList.append(row);
   }};
   const applyDate=(required=false)=>{
     const date=dateInput.value;
     if(!date&&!dateInput.validity.badInput&&!required)return true;
     if(!validDate(date)||!dateInput.validity.valid||date<data.startDate||date>data.endDate){
-      status.textContent=`除外日は ${data.startDate} 〜 ${data.endDate} の範囲で、年・月・日をすべて入力してください。`;
+      status.textContent=`${label}の除外日は ${data.startDate} 〜 ${data.endDate} の範囲で、年・月・日をすべて入力してください。`;
       dateInput.setAttribute('aria-invalid','true');return false;
     }
     excludedDates.add(date);dateInput.value='';dateInput.removeAttribute('aria-invalid');renderDates();return true;
   };
   addDate.onclick=()=>{stop();results.replaceChildren();if(applyDate(true))status.textContent='除外日を追加しました。もう一度検索してください。';};
+  dateInput.setAttribute('aria-describedby','practiceStatus');
+  return {dates:excludedDates,applyDate};
+  };
+  const faceDates=makeDates('主催者が対面に参加できない日','practiceExcludedDate','practiceExcludedDates','除外日を追加');
+  const onlineDates=makeDates('主催者がオンラインに参加できない日','practiceOnlineExcludedDate','practiceOnlineExcludedDates','オンラインの除外日を追加');
   const button=el('button','おすすめ練習日程を探す');button.type='submit';form.append(button);
-  const status=el('p');status.id='practiceStatus';status.setAttribute('role','status');dateInput.setAttribute('aria-describedby','practiceStatus');const results=el('div');
-  section.append(form,status,results);document.getElementById('splitSection').before(section);
+  const status=el('p');status.id='practiceStatus';status.setAttribute('role','status');const results=el('div');
+  section.append(form,status,results);document.getElementById('rankingArea').after(section);
   const stop=()=>{worker?.terminate();worker=null;clearTimeout(timer);button.disabled=false;};
   form.oninput=()=>{stop();results.replaceChildren();status.textContent='条件を変更しました。もう一度検索してください。';};
   form.onsubmit=event=>{
     event.preventDefault();stop();results.replaceChildren();
-    if(!applyDate())return;
+    if(!faceDates.applyDate()||!onlineDates.applyDate())return;
     if(!responses.length){status.textContent='回答が集まってから検索できます。';return;}
-    const settings={startDate:data.startDate,endDate:data.endDate,requiredIds:[...required.querySelectorAll('input:checked')].map(i=>i.value),includeMaybe:maybe.checked,excludedDates:[...excludedDates]};
+    const settings={startDate:data.startDate,endDate:data.endDate,requiredIds:[...required.querySelectorAll('input:checked')].map(i=>i.value),includeMaybe:maybe.checked,excludedDates:[...faceDates.dates],onlineExcludedDates:[...onlineDates.dates]};
     Object.entries(selectors).forEach(([key,s])=>settings[key]=s.value);
     try {
-    worker=new Worker(new URL('./practice-worker.js?v=practice-4',import.meta.url),{type:'module'});const active=worker;
+    worker=new Worker(new URL('./practice-worker.js?v=practice-5',import.meta.url),{type:'module'});const active=worker;
     button.disabled=true;status.textContent='対面とオンラインの候補を比較しています…';
     worker.onmessage=({data:message})=>{
       if(worker!==active)return;stop();if(message.error){status.textContent=message.error;return;}
