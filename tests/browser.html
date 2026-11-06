@@ -199,6 +199,19 @@ await test('全員候補を優先しランキングを20件ずつ最後まで表
  check(new Set([...rows()].map(r=>r.children[1].textContent)).size===54,'Duplicates');check(rows()[53].children[0].textContent==='54','Rank reset');
  el('rankingDuration').value='30';el('rankingDuration').dispatchEvent(new Event('change'));check(el('rankingArea').querySelectorAll('section:first-child tbody tr').length===20,'Duration did not reset');check(el('rankingArea').querySelector('section').textContent.includes('全56候補'),'Wrong full count');
 });
+await test('環境人間の必須メンバーは独立・複数指定・解除・ログアウトで消去',async()=>{
+ const groups=[{id:'online',title:'オンライン'},{id:'env',title:'環境人間'},{id:'eng',title:'工学'}];
+ const person=(name,value)=>({name,answers:{env:{[slot]:value},eng:{[slot]:'yes'},online:{[slot]:'yes'}}});
+ fixture({events:{one:{...event,groups}},responses:{one:[person('A','yes'),person('B','yes'),person('C','maybe')]}});
+ await go('#manage=one');await until(()=>el('practiceEnvironmentRequired'));
+ const area=el('practiceSection'),submit=area.querySelector('button[type=submit]');el('practiceEngineeringRequired').querySelector('input').checked=true;
+ const search=async()=>{submit.click();await until(()=>el('practiceStatus').textContent.includes('指定条件内'));};
+ await search();check([...area.querySelectorAll('.split-plan')].some(c=>c.textContent.includes('環境人間キャンパス')),'Default changed');
+ const inputs=el('practiceEnvironmentRequired').querySelectorAll('input');inputs[0].click();inputs[2].click();check(!area.querySelector('.split-plan'),'Stale result');await search();
+ check(![...area.querySelectorAll('.split-plan')].some(c=>c.textContent.includes('環境人間キャンパス')),'Maybe required admitted');check(area.querySelector('.split-plan').textContent.includes('工学キャンパス'),'Engineering affected');check([...area.querySelectorAll('.split-plan')].some(c=>c.textContent.includes('オンライン')),'Online affected');
+ inputs[2].click();await search();check([...area.querySelectorAll('.split-plan')].some(c=>c.textContent.includes('環境人間キャンパス')),'Removal failed');check(testFixture.writes.length===0,'Saved constraints');
+ el('logoutButton').click();await until(()=>!el('practiceEnvironmentRequired'));
+});
 document.querySelector('#summary').textContent=`${passed} passed / ${failed} failed`;
 fixture();await go('#manage=one');
 </script></body></html>

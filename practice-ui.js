@@ -1,4 +1,4 @@
-import { eventGroups } from './groups.js?v=practice-5';
+import { eventGroups } from './groups.js?v=practice-6';
 import { formatTime, validDate } from './time-data.js?v=audit-1';
 let section, worker, timer;
 const el=(tag,value='')=>{const e=document.createElement(tag);e.textContent=value;return e;};
@@ -16,10 +16,15 @@ export function setupPractice(data,responses){
     if(select.value){l.hidden=true;}
     else {l.append(el('small','既存イベントの回答項目を対応付けてください。'));}
   }
-  const required=el('fieldset');required.append(el('legend','工学キャンパスで参加必須の人（複数選択）'));
   const labelPerson=p=>responses.filter(r=>r.name===p.name).length>1?`${p.name}［${p.id}］`:p.name;
-  responses.forEach(r=>{const label=el('label',labelPerson(r)||'名前なし'),input=el('input');input.type='checkbox';input.value=r.id;label.prepend(input);required.append(label);});form.append(required);
-  const maybe=el('input');maybe.type='checkbox';const ml=el('label','？も含めた確認用の案を探す（工学の必須メンバーは○が必要）');ml.prepend(maybe);form.append(ml);
+  const makeRequired=(id,title)=>{
+    const field=el('fieldset');field.id=id;field.append(el('legend',title));
+    responses.forEach(r=>{const label=el('label',labelPerson(r)||'名前なし'),input=el('input');input.type='checkbox';input.value=r.id;label.prepend(input);field.append(label);});form.append(field);return field;
+  };
+  const required=makeRequired('practiceEngineeringRequired','工学キャンパスで参加必須の人（複数選択）');
+  const environmentRequired=makeRequired('practiceEnvironmentRequired','環境人間キャンパスで参加必須の人（複数選択・指定なしも可）');
+  form.append(el('p','必須メンバーは、そのキャンパスで開催する各回の全時間帯で○が必要です。オンラインには適用しません。'));
+  const maybe=el('input');maybe.type='checkbox';const ml=el('label','？も含めた確認用の案を探す（各キャンパスの必須メンバーは○が必要）');ml.prepend(maybe);form.append(ml);
   const makeDates=(label,inputId,listId,addLabel)=>{
   const excludedDates=new Set(), dateLabel=el('label',label), dateInput=el('input');
   dateInput.type='date';dateInput.min=data.startDate;dateInput.max=data.endDate;dateInput.id=inputId;dateLabel.append(dateInput);
@@ -54,10 +59,10 @@ export function setupPractice(data,responses){
     event.preventDefault();stop();results.replaceChildren();
     if(!faceDates.applyDate()||!onlineDates.applyDate())return;
     if(!responses.length){status.textContent='回答が集まってから検索できます。';return;}
-    const settings={startDate:data.startDate,endDate:data.endDate,requiredIds:[...required.querySelectorAll('input:checked')].map(i=>i.value),includeMaybe:maybe.checked,excludedDates:[...faceDates.dates],onlineExcludedDates:[...onlineDates.dates]};
+    const settings={startDate:data.startDate,endDate:data.endDate,requiredIds:[...required.querySelectorAll('input:checked')].map(i=>i.value),environmentRequiredIds:[...environmentRequired.querySelectorAll('input:checked')].map(i=>i.value),includeMaybe:maybe.checked,excludedDates:[...faceDates.dates],onlineExcludedDates:[...onlineDates.dates]};
     Object.entries(selectors).forEach(([key,s])=>settings[key]=s.value);
     try {
-    worker=new Worker(new URL('./practice-worker.js?v=practice-5',import.meta.url),{type:'module'});const active=worker;
+    worker=new Worker(new URL('./practice-worker.js?v=practice-6',import.meta.url),{type:'module'});const active=worker;
     button.disabled=true;status.textContent='対面とオンラインの候補を比較しています…';
     worker.onmessage=({data:message})=>{
       if(worker!==active)return;stop();if(message.error){status.textContent=message.error;return;}
