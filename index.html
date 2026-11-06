@@ -10,7 +10,7 @@
       location.replace(new URL('./respond.html' + location.search + location.hash, location.href).href);
     }
   </script>
-  <link rel="stylesheet" href="./dashboard.css?v=practice-4">
+  <link rel="stylesheet" href="./dashboard.css?v=practice-5">
 </head>
 <body>
   <header class="page-header">
@@ -63,42 +63,12 @@
         <select id="rankingDuration" disabled><option value="60" selected>1時間</option><option value="30">30分</option></select>
         <p id="rankingDurationStatus" role="status"></p>
         <div id="rankingArea"></div>
-        <section id="splitSection" hidden aria-labelledby="splitHeading">
-          <h3 id="splitHeading">分割して練習・開催する場合</h3>
-          <p>通常は○と回答した人が少なくとも1回参加できる組み合わせを探します。？・未回答は確定した参加可能人数に数えません。対象者は登録済みの回答者（主催者を除く）です。</p>
-          <form id="splitForm">
-            <label class="check-label"><input id="splitIncludeMaybe" type="checkbox">？の人に確認できれば全員が参加できる案も探す</label>
-            <p class="hint">通常は○だけで計算します。チェックすると明示的な？も候補に含め、確認が必要な人を表示します。×・未回答は含めません。確認候補は参加確定ではありません。確認候補では全員を含めること、○だけで確保できる人数、下記の優先条件の順に比較します。</p>
-            <div class="split-fields">
-              <div><label for="splitGroup">練習形式・回答項目</label><select id="splitGroup"></select></div>
-              <div><label for="splitOrganizer">主催者の回答</label><select id="splitOrganizer"></select></div>
-              <p>最大2回開催・1回の最低人数は2人（主催者を除く）</p>
-              <div><label for="splitDuration">1回の開催時間</label><select id="splitDuration"><option value="0.5">30分（0.5時間）</option><option value="1" selected>1時間</option></select></div>
-            </div>
-            <p class="hint">主催者も参加者用リンクから回答し、ここで選んでください。未指定では主催者の予定を判定できません。同じ名前でも別の回答として扱います。</p>
-            <label class="check-label"><input id="splitRequire" type="checkbox">主催者がすべての回で○のことを必須にする</label>
-            <details><summary>期間・時間帯と優先条件を調整</summary>
-              <div class="split-fields">
-                <div><label for="splitStartDate">対象の開始日</label><input id="splitStartDate" type="date" required></div>
-                <div><label for="splitEndDate">対象の終了日</label><input id="splitEndDate" type="date" required></div>
-                <div><label for="splitStartHour">開始時刻（時）</label><input id="splitStartHour" type="number" min="8" max="21" value="8" required></div>
-                <div><label for="splitEndHour">終了時刻（時）</label><input id="splitEndHour" type="number" min="9" max="22" value="22" required></div>
-                <div><label for="splitPriority">全員のカバーを優先した後は</label><select id="splitPriority"><option value="sessions">開催回数 → 主催者 → 避けたい時間 → 人数差</option><option value="early">避けたい時間 → 開催回数 → 主催者 → 人数差</option><option value="balanced">人数差 → 開催回数 → 主催者 → 避けたい時間</option></select></div>
-              </div>
-              <label class="check-label"><input id="splitAvoid" type="checkbox" checked>できるだけ避けたい時間帯を指定する</label>
-              <div class="date-fields"><div><label for="splitAvoidStart">避けたい時間の開始（時）</label><input id="splitAvoidStart" type="number" min="0" max="23" value="21" required></div><div><label for="splitAvoidEnd">避けたい時間の終了（時）</label><input id="splitAvoidEnd" type="number" min="0" max="24" value="24" required></div></div>
-              <p class="hint">21〜24なら21時以降を避けます。必ず除外したい場合は対象の終了時刻を21にしてください。開始と終了が同じなら終日、開始が終了より後なら翌日にまたがる時間帯です。所要時間は時間単位です。時間割形式の回答がある場合、開始時刻は10分刻みで探します。</p>
-            </details>
-            <div class="toolbar"><button id="splitCalculate" type="submit">組み合わせを提案</button><button id="splitCancel" type="button" class="secondary" hidden>計算を中止</button></div>
-          </form>
-          <p class="hint">設定・プランの選択はこの画面内だけで有効です。回答データは変更されず、参加者へ自動通知されません。重複して参加可能な人は各回に表示しますが、確保率では1人として数えます。</p>
-          <p id="splitStatus" role="status" aria-live="polite"></p><p id="splitSelection" role="status"></p><div id="splitResults"></div>
-        </section>
+
         <h3>回答者一覧</h3><div id="responseNames"></div>
       </section>
     </div>
   </main>
   <footer>Smart Schedule Coordinator</footer>
-  <script type="module" src="./dashboard.js?v=practice-4"></script>
+  <script type="module" src="./dashboard.js?v=practice-5"></script>
 </body>
 </html>

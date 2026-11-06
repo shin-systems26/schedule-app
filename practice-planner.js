@@ -5,6 +5,8 @@ export function planPractice(responses, settings, {maxPairs=500000, top=3}={}) {
   const dates=dateList(startDate,endDate);
   const excludedDates=new Set(settings.excludedDates||[]);
   if([...excludedDates].some(date=>!dates.includes(date))) throw Error('参加できない日はイベント期間内で指定してください。');
+  const onlineExcludedDates=new Set(settings.onlineExcludedDates||[]);
+  if([...onlineExcludedDates].some(date=>!dates.includes(date))) throw Error('オンラインに参加できない日はイベント期間内で指定してください。');
   const ids=responses.map(r=>r.id);
   if(ids.some(id=>!id)||new Set(ids).size!==ids.length) throw Error('回答IDが重複しています。');
   if(!environmentGroup||!engineeringGroup||!onlineGroup||new Set([environmentGroup,engineeringGroup,onlineGroup]).size!==3) throw Error('3つの形式に異なる回答項目を選んでください。');
@@ -17,6 +19,7 @@ export function planPractice(responses, settings, {maxPairs=500000, top=3}={}) {
     for(const date of dates){
       const day=new Date(date+'T00:00:00Z').getUTCDay();
       if(!online&&(day===0||day===6||excludedDates.has(date)))continue;
+      if(online&&onlineExcludedDates.has(date))continue;
       for(let start=480;start<=(online?1260:1140);start+=step){
         const answers=responses.map(r=>readInterval(groupAnswers(r,group),date,start,start+60));
         if(group===engineeringGroup&&!requiredIds.every(id=>answers[ids.indexOf(id)]==='yes'))continue;

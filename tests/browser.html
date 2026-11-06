@@ -49,32 +49,11 @@ await test('ログイン失敗の原因別表示と再試行',async()=>{
  }
  delete testFixture.loginError;el('loginButton').click();await until(()=>!el('dashboard').hidden);check(el('appStatus').textContent==='','Stale error remains');
 });
-await test('モード選択なしで作成・ランキングの下に分割調整を併記',async()=>{
+await test('モード選択なしで作成・ランキングの下におすすめ検索を併記',async()=>{
  fixture();await go('#create');await until(()=>el('createButton')&&!el('createButton').disabled);
  el('title').value='分割練習';el('startDate').value='2026-10-01';el('endDate').value='2026-10-02';el('createButton').click();
  await until(()=>el('manageStatus').textContent.includes('回答者数'));
- check(!el('scheduleMode')&&!('scheduleMode' in testFixture.events.created),'Mode retained');check(!!(el('rankingArea').compareDocumentPosition(el('splitSection'))&4),'Split not below ranking');check(!el('splitSection').hidden,'Split not opened');check(el('rankingArea').textContent.includes('まだ集計できる回答がありません。'),'Empty ranking message missing');
-});
-await test('既存イベントで分割提案・主催者指定・プラン選択・設定変更',async()=>{
- const hour=h=>`2026-10-01 ${String(h).padStart(2,'0')}:00〜${String(h+1).padStart(2,'0')}:00`;
- const response=(name,hours)=>({name,answers:{group1:Object.fromEntries(hours.map(h=>[hour(h),'yes']))}});
- fixture({events:{one:{...event,scheduleMode:'split'}},responses:{one:[response('主催者',[15,17]),response('<img src=x>',[15]),response('B',[15]),response('C',[17]),response('D',[17]),response('E',[17])]}});
- const original=JSON.stringify(testFixture.responses);await go('#manage=one');await until(()=>el('manageStatus').textContent.includes('6人'));
- check(!el('splitSection').hidden&&!el('showSplit'),'Split not shown by default');await until(()=>el('splitResults').querySelector('.split-plan'));check(el('rankingArea').querySelector('table'),'Ranking missing alongside plans');el('splitOrganizer').value='0';el('splitRequire').checked=true;el('splitCalculate').click();
- await until(()=>el('splitResults').querySelector('.split-plan'));
- const first=el('splitResults').querySelector('.split-plan');check(first.textContent.includes('5人中5人'),'Coverage incorrect');check(first.textContent.includes('2回開催'),'Count incorrect');check(!first.querySelector('img'),'Unsafe name');
- first.querySelector('button').click();check(el('splitSelection').textContent.includes('選択しました'),'Not selected');
- check(JSON.stringify(testFixture.responses)===original&&testFixture.writes.length===0,'Planner wrote data');
- check(!el('splitMax')&&!el('splitMin'),'Fixed settings still editable');
- check([...el('splitDuration').options].map(o=>o.value).join(',')==='0.5,1','Wrong duration options');
- el('splitDuration').value='0.5';el('splitDuration').dispatchEvent(new Event('input',{bubbles:true}));check(!el('splitResults').textContent,'Stale results retained');el('splitCalculate').click();await until(()=>el('splitResults').textContent.includes('15:00〜15:30'));
- check(el('splitResults').textContent.includes('5人中5人'),'Half-hour coverage');
- check(!el('splitResults').textContent.includes('3回開催'),'More than two sessions');
-});
-await test('分割条件エラー・計算中止・ログアウトで個人名を消去',async()=>{
- el('splitOrganizer').value='';el('splitCalculate').click();await until(()=>el('splitStatus').textContent.includes('主催者の回答を選択'));
- el('splitRequire').checked=false;el('splitCalculate').click();el('splitCancel').click();check(el('splitStatus').textContent.includes('中止'),'Cancel failed');
- el('logoutButton').click();await until(()=>el('dashboard').hidden);check(el('splitResults').textContent===''&&el('splitOrganizer').textContent===''&&el('splitSection').hidden,'Split personal data retained');
+ check(!el('scheduleMode')&&!('scheduleMode' in testFixture.events.created),'Mode retained');check(!!(el('rankingArea').compareDocumentPosition(el('practiceSection'))&4),'Split not below ranking');check(!el('splitSection')&&!el('splitForm'),'Old split UI remains');check(el('rankingArea').textContent.includes('まだ集計できる回答がありません。'),'Empty ranking message missing');
 });
 await test('回答一覧：新旧データ・未回答・同名・質問と日付と個人の切替・安全な表示',async()=>{
  const second='2026-10-02 09:00〜10:00';
@@ -92,16 +71,6 @@ await test('回答一覧：新旧データ・未回答・同名・質問と日�
 await test('回答一覧：空イベントと権限のないイベントに回答を残さない',async()=>{
  fixture();await go('#manage=one');await until(()=>el('manageStatus').textContent.includes('0人'));check(el('answerCount').textContent.includes('まだ回答'),'Empty message missing');
  frame.contentWindow.location.hash='manage=other';await until(()=>el('manageStatus').textContent.includes('権限'));check(el('answerOverview').hidden&&el('answerTable').textContent==='','Unauthorized view visible');
-});
-await test('？を含める場合は要確認と確定人数を明示し、回答を書き換えない',async()=>{
- fixture({responses:{one:[{name:'A',answers:{group1:{[slot]:'yes'}}},{name:'B',answers:{group1:{[slot]:'maybe'}}}]}});
- await go('#manage=one');await until(()=>el('splitResults').textContent.includes('○だけでは100％'));
- const before=JSON.stringify(testFixture.responses);el('splitIncludeMaybe').checked=true;el('splitCalculate').click();
- await until(()=>el('splitResults').textContent.includes('要確認プラン'));
- check(el('splitResults').textContent.includes('確認後の見込み100％'),'Missing conditional coverage');
- check(el('splitResults').textContent.includes('○のみで参加機会を確保：1人／2人'),'Confirmed count missing');
- check(el('splitResults').textContent.includes('この日時の？を確認する人：B'),'Confirmation target missing');
- check(JSON.stringify(testFixture.responses)===before&&testFixture.writes.length===0,'Changed answers');
 });
 await test('平日7区分・土日3区分の表と30分マスの修正・コピー・保存',async()=>{
  fixture({user:null,events:{one:{...event,startDate:'2026-10-26',endDate:'2026-11-02'}}});await go('respond.html?event=one');await until(()=>doc().querySelector('.simple-table'));
@@ -143,20 +112,20 @@ await test('未回答を加点しない・全員未回答の候補を表示し�
  check(el('rankingArea').querySelectorAll('tbody tr').length===1,'All-missing slots displayed');
  el('title').value='長すぎる期間';el('startDate').value='2026-01-01';el('endDate').value='2027-01-02';el('createButton').click();await until(()=>el('createStatus').textContent.includes('366日'));check(testFixture.writes.length===0,'Invalid event saved');
 });
-await test('ランキングを1時間と30分で切替・分割設定と独立・ログアウトで消去',async()=>{
+await test('ランキングを1時間と30分で切替・おすすめ検索と独立・ログアウトで消去',async()=>{
  fixture({responses:{one:[{name:'A',answers:{group1:{'2026-10-01 09:00〜09:30':'yes','2026-10-01 09:30〜10:00':'no'}}}]}});
  await go('#manage=one');await until(()=>!el('rankingDuration').disabled);
  const before=JSON.stringify(testFixture.responses);check(el('rankingDuration').value==='60','Default duration');
  el('rankingDuration').value='30';el('rankingDuration').dispatchEvent(new Event('change'));
- const row=el('rankingArea').querySelector('tbody tr');check(row.textContent.includes('09:00〜09:30'),'Wrong half-hour ranking');check(row.children[2].textContent.trim()==='1','Wrong half-hour count');check(el('splitDuration').value==='1','Split duration changed');
+ const row=el('rankingArea').querySelector('tbody tr');check(row.textContent.includes('09:00〜09:30'),'Wrong half-hour ranking');check(row.children[2].textContent.trim()==='1','Wrong half-hour count');check(!!el('practiceSection'),'Practice missing');
  el('rankingDuration').value='60';el('rankingDuration').dispatchEvent(new Event('change'));check(el('rankingArea').querySelector('tbody tr').children[2].textContent.trim()==='0','Half hour counted as full hour');
  check(JSON.stringify(testFixture.responses)===before&&testFixture.writes.length===0,'Ranking wrote responses');
  el('logoutButton').click();await until(()=>el('dashboard').hidden);check(!el('rankingArea').textContent&&el('rankingDuration').disabled,'Ranking not cleared');
 });
-await test('時間割回答の管理表示・17:50開始のランキングと分割案',async()=>{
+await test('時間割回答の管理表示・17:50開始のランキング',async()=>{
  const interval='2026-10-01 17:50〜18:50';fixture({responses:{one:[{name:'A',answers:{group1:{[interval]:'yes'}}},{name:'B',answers:{group1:{[interval]:'yes'}}}]}});
- await go('#manage=one');await until(()=>el('splitResults').textContent.includes('17:50〜18:50'));check(el('rankingArea').querySelector('tbody tr').textContent.includes(interval),'Ranking rounded time');
- el('answerOverview').open=true;check(el('answerTable').textContent.includes('17:50〜18:00'),'Answer detail lost boundary');check(el('splitResults').textContent.includes('2人中2人'),'Coverage lost');
+ await go('#manage=one');await until(()=>el('rankingArea').querySelector('tbody tr'));check(el('rankingArea').querySelector('tbody tr').textContent.includes(interval),'Ranking rounded time');
+ el('answerOverview').open=true;check(el('answerTable').textContent.includes('17:50〜18:00'),'Answer detail lost boundary');
 });
 await test('対面優先検索・必須メンバー・オンライン比較・ログアウト消去',async()=>{
  const groups=[{id:'online',title:'オンラインでやる場合'},{id:'env',title:'環境人間キャンパスでやる場合'},{id:'eng',title:'工学キャンパスでやる場合'}];
@@ -203,6 +172,22 @@ await test('練習検索のWorker起動失敗から再試行できる',async()=>
  const RealWorker=frame.contentWindow.Worker;frame.contentWindow.Worker=class {constructor(){throw Error('test failure');}};
  const submit=el('practiceSection').querySelector('button[type=submit]');submit.click();check(el('practiceStatus').textContent.includes('開始できません'),'Silent worker failure');check(!submit.disabled,'Retry disabled');
  frame.contentWindow.Worker=RealWorker;submit.click();await until(()=>!submit.disabled);check(!el('practiceStatus').textContent.includes('開始できません'),'Retry failed');
+});
+await test('オンライン除外は対面と独立：直接検索・追加・重複・全日・解除・入力エラー復帰',async()=>{
+ const dates=['2026-11-04','2026-11-05'],groups=[{id:'online',title:'オンライン'},{id:'env',title:'環境人間'},{id:'eng',title:'工学'}];
+ const answers=Object.fromEntries(groups.map(g=>[g.id,Object.fromEntries(dates.map(d=>[d+' 18:00〜19:00','yes']))]));
+ fixture({events:{one:{...event,startDate:dates[0],endDate:dates[1],groups}},responses:{one:[{name:'A',answers},{name:'B',answers}]}});
+ await go('#manage=one');await until(()=>el('practiceSection'));
+ const area=el('practiceSection'),submit=area.querySelector('button[type=submit]'),date=el('practiceOnlineExcludedDate');area.querySelector('fieldset input').checked=true;
+ const search=async()=>{submit.click();await until(()=>el('practiceStatus').textContent.includes('指定条件内'));};
+ el('practiceExcludedDate').value=dates[0];date.value=dates[1];await search();
+ let cards=[...area.querySelectorAll('.split-plan')];check(cards.filter(c=>c.textContent.includes('オンライン')).every(c=>c.textContent.includes(dates[0])),'Online wrong exclusion');check(cards.filter(c=>!c.textContent.includes('オンライン')).every(c=>c.textContent.includes(dates[1])),'Face exclusion changed');
+ date.value=dates[1];await search();check(el('practiceOnlineExcludedDates').children.length===1,'Duplicate online date');
+ date.value=dates[0];[...area.querySelectorAll('button')].find(b=>b.textContent==='オンラインの除外日を追加').click();await search();check(area.textContent.includes('オンライン1回で全員を含む候補はありません'),'All online dates not excluded');check(area.querySelector('.split-plan').textContent.includes('キャンパス'),'Face removed');
+ el('practiceOnlineExcludedDates').querySelector('button').click();await search();check([...area.querySelectorAll('.split-plan')].some(c=>c.textContent.includes('オンライン')),'Online removal failed');
+ date.value='2026-11-06';submit.click();check(el('practiceStatus').textContent.includes('2026-11-05')&&!submit.disabled,'Invalid date silent');date.value='';await search();
+ check(testFixture.writes.length===0,'Search wrote data');
+ el('logoutButton').click();await until(()=>!el('practiceSection'));
 });
 document.querySelector('#summary').textContent=`${passed} passed / ${failed} failed`;
 fixture();await go('#manage=one');
