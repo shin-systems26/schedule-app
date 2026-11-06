@@ -1,11 +1,11 @@
-import { setupPractice, clearPractice } from './practice-ui.js?v=practice-5';
+import { setupPractice, clearPractice } from './practice-ui.js?v=practice-6';
 import { candidateSlots, answerStep, dateList } from './time-data.js?v=audit-1';
 import { setupResponseView, clearResponseView } from './response-view.js?v=audit-1';
 import { db, auth, provider } from './firebase.js';
 import { onAuthStateChanged, signInWithPopup, signOut } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js';
 import { collection, doc, getDoc, getDocs, query, where, limit, addDoc, serverTimestamp, updateDoc, writeBatch, deleteDoc } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
 import { calculateRanking, renderRanking } from './ranking.js?v=ranking-2';
-import { eventGroups, practiceGroups } from './groups.js?v=practice-5';
+import { eventGroups, practiceGroups } from './groups.js?v=practice-6';
 
 const $ = id => document.getElementById(id);
 let currentUser = null;

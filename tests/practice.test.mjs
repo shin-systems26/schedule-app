@@ -116,3 +116,18 @@ test('every online recommendation agrees with hourly ranking and never includes 
   for(const p of result.online){const s=p.sessions[0],r=ranked.find(r=>r.slot===rangeKey(s.date,s.start,s.end));assert(r);assert.equal(r.no,0);assert.equal(r.missing,0);assert.equal(r.yes,p.confirmedCovered);assert.equal(r.maybe,s.needsConfirmation.length);}
  }
 });
+
+test('environment required members are independent, optional, and strictly yes for full session',()=>{
+ for(const value of ['yes','maybe','no',undefined]){
+  const rs=people();for(const group of ['env','eng','online'])put(rs,['A','B','C','D','E'],group,key('2026-11-04'));
+  delete rs[1].answers.env[key('2026-11-04')];if(value)put(rs,['B'],'env',key('2026-11-04'),value);
+  const before=JSON.stringify(rs),r=planPractice(rs,{...settings,environmentRequiredIds:['A','B'],includeMaybe:true},{top:100});
+  assert.equal(r.face.some(p=>p.sessions.some(s=>s.location==='環境人間キャンパス')),value==='yes');
+  assert(r.face.some(p=>p.sessions.some(s=>s.location==='工学キャンパス')));assert(r.online.length);
+  assert(planPractice(rs,{...settings,includeMaybe:true},{top:100}).face.some(p=>p.sessions.some(s=>s.location==='環境人間キャンパス')));
+  assert.equal(JSON.stringify(rs),before);
+ }
+ const rs=people();put(rs,['A','B','C'],'env',key('2026-11-04'));put(rs,['B'],'env',key('2026-11-04','18:30〜19:00'),'no');
+ assert.equal(planPractice(rs,{...settings,environmentRequiredIds:['B']}).face.length,0);
+ assert.throws(()=>planPractice(rs,{...settings,environmentRequiredIds:['unknown']}),/環境人間/);
+});

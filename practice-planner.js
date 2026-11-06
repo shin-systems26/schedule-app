@@ -1,7 +1,7 @@
 import { dateList, answerStep, readInterval, groupAnswers } from './time-data.js?v=audit-1';
 // Compare campus combinations using response IDs; never write back to saved answers.
 export function planPractice(responses, settings, {maxPairs=500000, top=3}={}) {
-  const {startDate,endDate,environmentGroup,engineeringGroup,onlineGroup,requiredIds=[],includeMaybe=false}=settings;
+  const {startDate,endDate,environmentGroup,engineeringGroup,onlineGroup,requiredIds=[],environmentRequiredIds=[],includeMaybe=false}=settings;
   const dates=dateList(startDate,endDate);
   const excludedDates=new Set(settings.excludedDates||[]);
   if([...excludedDates].some(date=>!dates.includes(date))) throw Error('参加できない日はイベント期間内で指定してください。');
@@ -11,6 +11,7 @@ export function planPractice(responses, settings, {maxPairs=500000, top=3}={}) {
   if(ids.some(id=>!id)||new Set(ids).size!==ids.length) throw Error('回答IDが重複しています。');
   if(!environmentGroup||!engineeringGroup||!onlineGroup||new Set([environmentGroup,engineeringGroup,onlineGroup]).size!==3) throw Error('3つの形式に異なる回答項目を選んでください。');
   if(!requiredIds.length||requiredIds.some(id=>!ids.includes(id))) throw Error('工学キャンパスで参加必須の人を選んでください。');
+  if(environmentRequiredIds.some(id=>!ids.includes(id))) throw Error('環境人間キャンパスの必須メンバーを選び直してください。');
   const people=responses.map(r=>({id:r.id,name:r.name||'名前なし'}));
   const count=m=>{let n=0;while(m){m&=m-1n;n++;}return n;};
   const members=m=>people.filter((_,i)=>m&(1n<<BigInt(i)));
@@ -22,6 +23,7 @@ export function planPractice(responses, settings, {maxPairs=500000, top=3}={}) {
       if(online&&onlineExcludedDates.has(date))continue;
       for(let start=480;start<=(online?1260:1140);start+=step){
         const answers=responses.map(r=>readInterval(groupAnswers(r,group),date,start,start+60));
+        if(group===environmentGroup&&!environmentRequiredIds.every(id=>answers[ids.indexOf(id)]==='yes'))continue;
         if(group===engineeringGroup&&!requiredIds.every(id=>answers[ids.indexOf(id)]==='yes'))continue;
         let mask=0n,confirmed=0n;
         answers.forEach((a,i)=>{if(a==='yes')confirmed|=1n<<BigInt(i);if(a==='yes'||includeMaybe&&a==='maybe')mask|=1n<<BigInt(i);});
