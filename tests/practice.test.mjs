@@ -102,3 +102,17 @@ test('online exclusions are independent, validated, reversible and leave source 
  for(const date of ['2026-11-09','2026-02-30','invalid'])assert.throws(()=>planPractice(rs,{...settings,onlineExcludedDates:[date]}),/オンライン/);
  assert.equal(JSON.stringify(rs),before);
 });
+
+test('every online recommendation agrees with hourly ranking and never includes no or missing',async()=>{
+ const {calculateRanking}=await import('../ranking.js');
+ const {candidateSlots,answerStep,rangeKey}=await import('../time-data.js');
+ for(const legacy of [false,true])for(const includeMaybe of [false,true]){
+  const rs=people();const day='2026-11-04';
+  rs.forEach((r,i)=>{const a={};for(let m=480;m<1320;m+=legacy?10:30)a[rangeKey(day,m,m+(legacy?10:30))]=m<600?(i<3?'yes':'no'):m<720?(i<2?'yes':'maybe'):'yes';if(legacy)r.online=a;else r.answers.online=a;if(legacy)delete r.answers.online;});
+  const ranked=calculateRanking(rs,'online',candidateSlots(settings.startDate,settings.endDate,answerStep(rs,'online'),60));
+  const result=planPractice(rs,{...settings,includeMaybe},{top:1000});
+  const eligible=ranked.filter(r=>r.no===0&&r.missing===0&&(includeMaybe||r.maybe===0));
+  assert.equal(result.online.length,eligible.length);
+  for(const p of result.online){const s=p.sessions[0],r=ranked.find(r=>r.slot===rangeKey(s.date,s.start,s.end));assert(r);assert.equal(r.no,0);assert.equal(r.missing,0);assert.equal(r.yes,p.confirmedCovered);assert.equal(r.maybe,s.needsConfirmation.length);}
+ }
+});

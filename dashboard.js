@@ -4,7 +4,7 @@ import { setupResponseView, clearResponseView } from './response-view.js?v=audit
 import { db, auth, provider } from './firebase.js';
 import { onAuthStateChanged, signInWithPopup, signOut } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js';
 import { collection, doc, getDoc, getDocs, query, where, limit, addDoc, serverTimestamp, updateDoc, writeBatch, deleteDoc } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
-import { calculateRanking, renderRanking } from './ranking.js?v=audit-1';
+import { calculateRanking, renderRanking } from './ranking.js?v=ranking-2';
 import { eventGroups, practiceGroups } from './groups.js?v=practice-5';
 
 const $ = id => document.getElementById(id);
@@ -46,7 +46,7 @@ function updateRanking() {
   const duration=Number($('rankingDuration').value);
   if (![30,60].includes(duration)) return;
   const {data,responses}=selected;
-  $('rankingDurationStatus').textContent=`${duration===60?'1時間':'30分'}を通して参加できる人数で集計。○が多い順 → ×が少ない順 → 未回答が少ない順です。`;
+  $('rankingDurationStatus').textContent=`${duration===60?'1時間':'30分'}を通して参加できる人数で集計。全員○ → ○と？だけ（全員の確認待ち）→ その他の順。各区分では○が多い順 → ×が少ない順 → 未回答が少ない順です。通常ランキングには除外日を適用しません。`;
   for (const [index,group] of eventGroups(data).entries()) {
     const slots=candidateSlots(data.startDate,data.endDate,answerStep(responses,group.id),duration);
     renderRanking($('rankingArea'),`${index+1}. ${group.title}`,calculateRanking(responses,group.id,slots),responses.length);

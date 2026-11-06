@@ -9,9 +9,9 @@ test('missing answers neither earn points nor become maybe',()=>{
  assert.deepEqual([r[0].yes,r[0].maybe,r[0].missing,r[0].score],[1,0,2,3]);
  assert.deepEqual([r[1].maybe,r[1].missing,r[1].score],[0,3,0]);
 });
-test('confirmed attendance outranks unconfirmed even when old weighted score is smaller',()=>{
+test('all-person tentative option outranks a candidate that excludes people',()=>{
  const responses=Array.from({length:5},(_,i)=>({answers:{g:{[slot]:i<2?'yes':'no',[later]:'maybe'}}}));
- const r=calculateRanking(responses,'g',[later,slot]);assert.equal(r[0].slot,slot);assert.ok(r[0].score<r[1].score);
+ const r=calculateRanking(responses,'g',[later,slot]);assert.equal(r[0].slot,later);assert.equal(r[0].no,0);
 });
 test('all yes first; ties use fewer no, then fewer missing, then chronological order',()=>{
  const keys=[540,600,660,720].map(m=>rangeKey(day,m,m+60));
