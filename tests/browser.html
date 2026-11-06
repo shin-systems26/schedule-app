@@ -189,6 +189,16 @@ await test('オンライン除外は対面と独立：直接検索・追加・�
  check(testFixture.writes.length===0,'Search wrote data');
  el('logoutButton').click();await until(()=>!el('practiceSection'));
 });
+await test('全員候補を優先しランキングを20件ずつ最後まで表示・時間切替でリセット',async()=>{
+ const groups=[{id:'online',title:'オンライン'},{id:'env',title:'環境人間'},{id:'eng',title:'工学'}];
+ const answers={'2026-10-01 08:00〜22:00':'yes','2026-10-02 08:00〜22:00':'yes'};
+ fixture({events:{one:{...event,groups}},responses:{one:[{name:'A',answers:{online:answers}},{name:'B',answers:{online:answers}}]}});
+ await go('#manage=one');await until(()=>el('rankingArea').querySelector('tbody tr'));
+ const section=el('rankingArea').querySelector('section'),rows=()=>section.querySelectorAll('tbody tr');
+ check(rows().length===20,'Initial page');const more=section.querySelector('button');more.click();check(rows().length===40,'Second page');more.click();check(rows().length===54&&more.hidden,'Final page');
+ check(new Set([...rows()].map(r=>r.children[1].textContent)).size===54,'Duplicates');check(rows()[53].children[0].textContent==='54','Rank reset');
+ el('rankingDuration').value='30';el('rankingDuration').dispatchEvent(new Event('change'));check(el('rankingArea').querySelectorAll('section:first-child tbody tr').length===20,'Duration did not reset');check(el('rankingArea').querySelector('section').textContent.includes('全56候補'),'Wrong full count');
+});
 document.querySelector('#summary').textContent=`${passed} passed / ${failed} failed`;
 fixture();await go('#manage=one');
 </script></body></html>
